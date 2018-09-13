@@ -1,0 +1,7 @@
+This is a simple example using JFLEX and CUP. You can start your project assignment 1 from there.
+
+OPTIONS:
+make all: compile and run on the input of test.pl
+make compile: compile your Lexer and Parser
+make run: run on the input of test.pl
+make clean: clean your project

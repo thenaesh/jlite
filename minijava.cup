@@ -1,0 +1,49 @@
+/* Minijava Grammar */
+
+import java_cup.runtime.ComplexSymbolFactory;
+import java_cup.runtime.ScannerBuffer;
+
+import java.io.*;
+
+parser code {:
+  public Parser(Lexer lex, ComplexSymbolFactory sf) {
+    super(lex,sf);
+  }
+  public static void main(String[] args) throws Exception {
+      // initialize the symbol factory
+      ComplexSymbolFactory csf = new ComplexSymbolFactory();
+      // create a buffering scanner wrapper
+      ScannerBuffer lexer = new ScannerBuffer(new Lexer(new BufferedReader(new FileReader(args[0])),csf));
+      // start parsing
+      Parser p = new Parser(lexer,csf);
+      int e = (int)p.parse().value;
+      System.out.println(e);
+  }
+:};
+
+// terminals
+terminal Integer INTCONST;
+terminal PLUS, MINUS, TIMES, DIV;
+terminal LPAREN, RPAREN, UMINUS;
+terminal String STRING_LITERAL;
+terminal CLASS_BEGIN, CLASS_END;
+
+// non-terminals
+non terminal Integer program, expr;
+
+// precedence
+precedence left PLUS, MINUS, TIMES, DIV;
+precedence left UMINUS;
+
+
+program   ::=  expr:e     {: RESULT = e;  :}
+    ;
+expr ::=
+    | expr:e1 PLUS expr:e2             {: RESULT = e1+e2; :}
+    | expr:e1 MINUS expr:e2            {: RESULT = e1-e2; :}
+    | expr:e1 TIMES expr:e2            {: RESULT = e1*e2; :}
+    | expr:e1 DIV expr:e2              {: RESULT = e1/e2; :}
+    | INTCONST:n	                     {: RESULT = n;     :}
+    | LPAREN expr:e RPAREN             {: RESULT = e;     :}
+    | MINUS expr:e                     {: RESULT = -e;    :}    %prec UMINUS
+    ;
