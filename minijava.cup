@@ -30,26 +30,54 @@ terminal PLUS, MINUS, TIMES, DIV, UMINUS;
 terminal LT, GT, GEQ, LEQ, EQ, NEQ;
 terminal OR, AND;
 terminal LPAREN, RPAREN, LBLOCK, RBLOCK;
-terminal ENDSTMT;
+terminal COMMA, DOT, ENDSTMT;
 terminal String IDNAME, CLASSNAME;
 
 // non-terminals
+non terminal ProgramAST program;
+non terminal ClassAST mainclass;
+non terminal FuncDeclAST mainfunction;
+non terminal ListAST<ClassAST> classes;
+non terminal VarDeclListAST params, paramlist, nonemptyparamlist, restparamlist;
+non terminal AST block, stmts;
+non terminal AST expr;
 non terminal AST intconst, boolconst, stringliteral;
-non terminal AST program, mainclass, expr;
 
 // precedence
+precedence left CLASS, IDNAME, CLASSNAME;
+precedence left LPAREN, RPAREN;
 precedence left PLUS, MINUS, TIMES, DIV;
 precedence left UMINUS;
 
+program ::= mainclass:mc classes {:  RESULT = new ProgramAST(mc, new ListAST<ClassAST>()); :};
+
+mainclass ::= CLASS CLASSNAME:c LBLOCK mainfunction:f RBLOCK {: RESULT = new ClassAST(c, new VarDeclListAST(), new ListAST(f)); :} ;
+mainfunction ::= MAINFUNC params:ps block {: RESULT = new FuncDeclAST("main", ps); :};
+
+classes ::=
+  ;
+
+// parameter handling
+params ::= LPAREN paramlist:ps RPAREN {: RESULT = ps; :}
+  ;
+paramlist ::= {: RESULT = new VarDeclListAST(); :}
+  | nonemptyparamlist:ps {: RESULT = ps; :}
+  ;
+nonemptyparamlist ::= CLASSNAME:t IDNAME:x restparamlist:ps {: RESULT = new VarDeclListAST(t, x, ps); :}
+  ;
+restparamlist ::= {: RESULT = new VarDeclListAST(); :}
+ | COMMA nonemptyparamlist:ps {: RESULT = ps; :}
+ ;
+
+// block handling
+block ::= LBLOCK stmts RBLOCK;
+stmts ::= //empty
+  ;
+
 /*
-program ::= mainclass:r {:  RESULT = r :};
-
-mainclass ::= CLASS STRING_LITERAL LBLOCK mainfunction:f RBLOCK {: RESULT = new AST("mainclass", null, f) :};
-mainfunction ::= MAINFUNC LPAREN paramlist:p methodbody:b {: RESULT =  :};
-*/
-
 program   ::=  expr:e     {: RESULT = new ProgramAST(e);  :}
     ;
+*/
 
 
 expr ::=

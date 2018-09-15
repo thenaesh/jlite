@@ -27,16 +27,17 @@ class AST {
 
     // remove extra comma
     sb.deleteCharAt(sb.length() - 1);
-    
+
     sb.append("}");
     return sb.toString();
   }
 }
 
 class ProgramAST extends AST {
-  ProgramAST(AST start) {
+  ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) {
     super("__program__");
-    this.addOperand("start", start);
+    this.addOperand("mainclass", mainclass);
+    this.addOperand("classes", classes);
   }
 }
 
@@ -52,5 +53,51 @@ class BinOpAST extends AST {
     super(operator);
     this.addOperand("left", left);
     this.addOperand("right", right);
+  }
+}
+
+class ListAST<T> extends AST {
+  ListAST() {
+    super("listnode");
+  }
+  ListAST(T item, ListAST rest) {
+    this();
+    this.addOperand("item", item);
+    this.addOperand("rest", rest);
+  }
+  ListAST(T item) {
+    this(item, new ListAST<T>());
+  }
+}
+
+class VarDeclListAST extends AST {
+  VarDeclListAST() {
+    super("vardecllistnode");
+  }
+  VarDeclListAST(String type, String name, VarDeclListAST rest) {
+    this();
+    this.addOperand("type", "\"" + type + "\"");
+    this.addOperand("name", "\"" + name + "\"");
+    this.addOperand("rest", rest);
+  }
+  VarDeclListAST(String type, String name) {
+    this(type, name, new VarDeclListAST());
+  }
+}
+
+class FuncDeclAST extends AST {
+  FuncDeclAST(String name, VarDeclListAST params) {
+    super("functiondecl");
+    this.addOperand("name", "\"" + name + "\"");
+    this.addOperand("params", params);
+  }
+}
+
+class ClassAST extends AST {
+  ClassAST(String name, VarDeclListAST members, ListAST<FuncDeclAST> methods) {
+    super("classdecl");
+    this.addOperand("name", "\"" + name + "\"");
+    this.addOperand("members", members);
+    this.addOperand("methods", methods);
   }
 }

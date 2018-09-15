@@ -54,7 +54,6 @@ ClassName = [A-Z][A-Za-z0-9_]*
 
 
 %state STRING
-%state CLASS
 
 %%
 
@@ -96,6 +95,8 @@ ClassName = [A-Z][A-Za-z0-9_]*
     "{"               { return symbol("{", LBLOCK); }
     "}"               { return symbol("}", RBLOCK); }
     ";"               { return symbol(";", ENDSTMT); }
+    ","               { return symbol(",", COMMA); }
+    "."               { return symbol(",", DOT); }
 
     /* identifiers */
     {IdName}          { String name = yytext(); return symbol("<id>"+name, IDNAME, name); }
