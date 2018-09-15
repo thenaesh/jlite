@@ -46,11 +46,10 @@ import java_cup.runtime.ComplexSymbolFactory.Location;
 %eofval}
 
 IntLiteral = 0 | [1-9][0-9]*
-BooleanLiteral = true|false
 
 new_line = \r|\n|\r\n;
 white_space = {new_line} | [ \t\f]
-Identifier = [a-z][A-Za-z0-9_]*
+IdName = [a-z][A-Za-z0-9_]*
 ClassName = [A-Z][A-Za-z0-9_]*
 
 
@@ -60,21 +59,51 @@ ClassName = [A-Z][A-Za-z0-9_]*
 %%
 
 <YYINITIAL>{
-    /* literals */
-    {IntLiteral}      { return symbol("Intconst",INTCONST, new Integer(Integer.parseInt(yytext()))); }
+    /* keywords */
+    "class"           { return symbol("class", CLASS); }
+    "while"           { return symbol("while", WHILE); }
+    "readln"          { return symbol("readln", READLN); }
+    "println"         { return symbol("println", PRINTLN); }
+    "if"              { return symbol("if", IF); }
+    "else"            { return symbol("else", ELSE); }
+    "this"            { return symbol("this", THIS); }
+    "new"             { return symbol("new", NEW); }
+    "null"            { return symbol("null", NULL); }
+    "Void main"       { return symbol("mainfunc", MAINFUNC); }
 
-    /* separators */
-    "("               { return symbol("(",LPAREN); }
-    ")"               { return symbol(")",RPAREN); }
+    /* literals */
+    {IntLiteral}      { return symbol("IntConst",INTCONST, new Integer(Integer.parseInt(yytext()))); }
+    "true"            { return symbol("true", BOOLCONST, true); }
+    "false"           { return symbol("false", BOOLCONST, false); }
+
+    /* operators */
     "+"               { return symbol("+",PLUS); }
     "-"               { return symbol("+",MINUS); }
     "*"               { return symbol("+",TIMES); }
     "/"               { return symbol("+",DIV); }
+    "<"               { return symbol("<",LT); }
+    ">"               { return symbol(">",GT); }
+    "<="              { return symbol("<=",LEQ); }
+    ">="              { return symbol(">=",GEQ); }
+    "=="              { return symbol("==",EQ); }
+    "!="              { return symbol("!=",NEQ); }
+    "||"              { return symbol("||",OR); }
+    "&&"              { return symbol("&&",AND); }
+
+    /* blocks and statements */
+    "("               { return symbol("(",LPAREN); }
+    ")"               { return symbol(")",RPAREN); }
+    "{"               { return symbol("{", LBLOCK); }
+    "}"               { return symbol("}", RBLOCK); }
+    ";"               { return symbol(";", ENDSTMT); }
+
+    /* identifiers */
+    {IdName}          { String name = yytext(); return symbol("<id>"+name, IDNAME, name); }
+    {ClassName}       { String name = yytext(); return symbol("<class>"+name, CLASSNAME, name); }
 
     {white_space}     { /* ignore */ }
 
     "\""              { string.setLength(0); yybegin(STRING); }
-    "class "          { yybegin(CLASS); }
 }
 
 <STRING> {
@@ -87,16 +116,6 @@ ClassName = [A-Z][A-Za-z0-9_]*
     \\r                            { string.append('\r'); }
     \\\"                           { string.append('\"'); }
     \\                             { string.append('\\'); }
-}
-
-<CLASS> {
-  {ClassName}                      { className = yytext(); }
-  "{"                              { if (className != null) return symbol("ClassBegin", CLASS_BEGIN, className);
-                                     else error("Class declaration not followed by a class name"); }
-  "}"                              { yybegin(YYINITIAL);
-                                     String className_ = className;
-                                     return symbol("ClassEnd", CLASS_END, className_); }
-  {white_space}                    {}
 }
 
 /* error fallback */

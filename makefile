@@ -6,7 +6,7 @@ compile:
 	javac -cp java-cup-11b-runtime.jar:. *.java
 
 run:
-	java -cp java-cup-11b-runtime.jar:. Parser ./tests/test.pl
+	java -cp java-cup-11b-runtime.jar:. Parser tests/arithmetic.pl
 
 clean:
 	rm Lexer.java Parser.java sym.java
