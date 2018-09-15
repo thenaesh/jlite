@@ -45,26 +45,26 @@ precedence left UMINUS;
 program ::= mainclass:r {:  RESULT = r :};
 
 mainclass ::= CLASS STRING_LITERAL LBLOCK mainfunction:f RBLOCK {: RESULT = new AST("mainclass", null, f) :};
-mainfunction ::= MAINFUNC LPAREN paramlist RPAREN LBLOCK RBLOCK {::};
+mainfunction ::= MAINFUNC LPAREN paramlist:p methodbody:b {: RESULT =  :};
 */
 
-program   ::=  expr:e     {: RESULT = new AST("__program__", null, e);  :}
+program   ::=  expr:e     {: RESULT = new ProgramAST(e);  :}
     ;
 
 
 expr ::=
-    | expr:e1 PLUS expr:e2             {: RESULT = new AST("plus", null, e1, e2); :}
-    | expr:e1 MINUS expr:e2            {: RESULT = new AST("minus", null, e1, e2); :}
-    | expr:e1 TIMES expr:e2            {: RESULT = new AST("times", null, e1, e2); :}
-    | expr:e1 DIV expr:e2              {: RESULT = new AST("div", null, e1, e2); :}
+    | expr:e1 PLUS expr:e2             {: RESULT = new BinOpAST("+", e1, e2); :}
+    | expr:e1 MINUS expr:e2            {: RESULT = new BinOpAST("-", e1, e2); :}
+    | expr:e1 TIMES expr:e2            {: RESULT = new BinOpAST("*", e1, e2); :}
+    | expr:e1 DIV expr:e2              {: RESULT = new BinOpAST("/", e1, e2); :}
     | intconst:e	                     {: RESULT = e;     :}
     | LPAREN expr:e RPAREN             {: RESULT = e;     :}
-    | MINUS expr:e                     {: RESULT = new AST("uminus", null, e);    :}    %prec UMINUS
+    | MINUS expr:e                     {: RESULT = new BinOpAST("-", new ConstAST(0), e);    :}    %prec UMINUS
     ;
 
-intconst ::= INTCONST:n {: RESULT = new AST("intconst", n); :}
+intconst ::= INTCONST:n {: RESULT = new ConstAST(n); :}
   ;
-boolconst ::= BOOLCONST:b {: RESULT = new AST("boolconst", b); :}
+boolconst ::= BOOLCONST:b {: RESULT = new ConstAST(b); :}
   ;
-stringliteral ::= STRING_LITERAL:s {: RESULT = new AST("stringliteral", s); :}
+stringliteral ::= STRING_LITERAL:s {: RESULT = new ConstAST(s); :}
   ;

@@ -1,22 +1,17 @@
-import java.util.List;
+import java.util.HashMap;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 class AST {
-  public String name;
-  public Object val = null;
-  public List<AST> children = null;
+  public String operator;
+  public HashMap<String, Object> operands = new HashMap<>();
 
-  public AST(String name, Object val, AST... children) {
-    this.name = name;
+  public AST(String operator) {
+    this.operator = operator;
+  }
 
-    if (val != null) {
-      this.val = val;
-    }
-
-    if (children != null && children.length != 0) {
-      this.children = Arrays.asList(children);
-    }
+  public void addOperand(String name, Object value) {
+    this.operands.put(name, value);
   }
 
   @Override
@@ -24,30 +19,38 @@ class AST {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
 
-    // print AST node type
-    sb.append("\"name\":\"" + this.name + "\"");
+    // print operator
+    sb.append("\"operator\":\"" + this.operator + "\",");
 
-    if (this.val != null) {
-      sb.append(",");
-      String valStr = this.val == null ? "null" : val.toString();
-      sb.append("\"val\":\"" + valStr + "\"");
-    }
+    // recursively print operands
+    this.operands.forEach((name, value) -> sb.append("\"" + name + "\":" + value.toString() + ","));
 
-    // recursively print child ASTs if there are children
-    if (this.children != null) {
-      sb.append(",");
-      List<String> childStrs = this.children.stream().map(c -> c.toString()).collect(Collectors.toList());
-      sb.append("\"children\":[");
-      for (String childStr: childStrs) {
-        sb.append(childStr);
-        sb.append(",");
-      }
-      // remove the last comma
-      sb.deleteCharAt(sb.length() - 1);
-      sb.append("]");
-    }
-
+    // remove extra comma
+    sb.deleteCharAt(sb.length() - 1);
+    
     sb.append("}");
     return sb.toString();
+  }
+}
+
+class ProgramAST extends AST {
+  ProgramAST(AST start) {
+    super("__program__");
+    this.addOperand("start", start);
+  }
+}
+
+class ConstAST<T> extends AST {
+  ConstAST(T val) {
+    super("const");
+    this.addOperand("val", val);
+  }
+}
+
+class BinOpAST extends AST {
+  BinOpAST(String operator, AST left, AST right) {
+    super(operator);
+    this.addOperand("left", left);
+    this.addOperand("right", right);
   }
 }
