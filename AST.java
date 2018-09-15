@@ -70,24 +70,17 @@ class ListAST<T> extends AST {
   }
 }
 
-class VarDeclListAST extends AST {
-  VarDeclListAST() {
-    super("vardecllistnode");
-  }
-  VarDeclListAST(String type, String name, VarDeclListAST rest) {
-    this();
+class VarDeclAST extends AST {
+  VarDeclAST(String type, String name) {
+    super("vardecl");
     this.addOperand("type", "\"" + type + "\"");
     this.addOperand("name", "\"" + name + "\"");
-    this.addOperand("rest", rest);
-  }
-  VarDeclListAST(String type, String name) {
-    this(type, name, new VarDeclListAST());
   }
 }
 
 class FuncDeclAST extends AST {
-  FuncDeclAST(String returntype, String name, VarDeclListAST params) {
-    super("functiondecl");
+  FuncDeclAST(String returntype, String name, ListAST<VarDeclAST> params) {
+    super("funcdecl");
     this.addOperand("returntype", "\"" + returntype + "\"");
     this.addOperand("name", "\"" + name + "\"");
     this.addOperand("params", params);
@@ -95,7 +88,7 @@ class FuncDeclAST extends AST {
 }
 
 class ClassAST extends AST {
-  ClassAST(String name, VarDeclListAST members, ListAST<FuncDeclAST> methods) {
+  ClassAST(String name, ListAST<VarDeclAST> members, ListAST<FuncDeclAST> methods) {
     super("classdecl");
     this.addOperand("name", "\"" + name + "\"");
     this.addOperand("members", members);
