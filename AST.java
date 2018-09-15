@@ -86,8 +86,9 @@ class VarDeclListAST extends AST {
 }
 
 class FuncDeclAST extends AST {
-  FuncDeclAST(String name, VarDeclListAST params) {
+  FuncDeclAST(String returntype, String name, VarDeclListAST params) {
     super("functiondecl");
+    this.addOperand("returntype", "\"" + returntype + "\"");
     this.addOperand("name", "\"" + name + "\"");
     this.addOperand("params", params);
   }
