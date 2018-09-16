@@ -28,10 +28,11 @@ terminal String STRING_LITERAL;
 terminal MAINFUNC;
 terminal PLUS, MINUS, TIMES, DIV, UMINUS;
 terminal LT, GT, GEQ, LEQ, EQ, NEQ;
-terminal OR, AND;
+terminal OR, AND, NOT;
 terminal LPAREN, RPAREN, LBLOCK, RBLOCK;
 terminal COMMA, DOT, ENDSTMT;
 terminal RETURN;
+terminal ASSIGN;
 terminal String IDNAME, CLASSNAME;
 
 // non-terminals
@@ -44,18 +45,24 @@ non terminal ListAST<FuncDeclAST> methods;
 non terminal ListAST<VarDeclAST> params, paramlist, nonemptyparamlist, restparamlist;
 non terminal BlockAST block;
 non terminal Pair<ListAST<VarDeclAST>, ListAST<StmtAST>> blockvars;
-non terminal ListAST<StmtAST> stmts, reststmts;
+non terminal ListAST<StmtAST> stmts, reststmts, whileblock;
 non terminal AST atom;
-non terminal AST exp, bexp, aexp;
+non terminal AST exp, aexp, bexp, bop;
+non terminal AST explist, nonemptyexplist, restexplist;
 non terminal ConstAST<Integer> intconst;
 non terminal ConstAST<Boolean> boolconst;
 non terminal ConstAST<String> stringliteral;
 
 // precedence
-precedence left CLASS, IDNAME, CLASSNAME;
-precedence left LPAREN, RPAREN;
-precedence left PLUS, MINUS, TIMES, DIV;
+precedence left ASSIGN;
+precedence left AND;
+precedence left OR;
+precedence left NOT;
+precedence left LT, GT, LEQ, GEQ, EQ, NEQ;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
 precedence left UMINUS;
+precedence left LPAREN, RPAREN;
 
 // program handling
 program ::= mainclass:mc classes:cs {:  RESULT = new ProgramAST(mc, cs); :};
@@ -96,22 +103,68 @@ blockvars ::= stmts:s {: RESULT = new Pair(new ListAST<VarDeclAST>(), s); :}
   ;
 
 stmts ::= RETURN ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(), ss); :}
-  | RETURN IDNAME:i ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(i), ss); :}
+  | RETURN exp ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(), ss); :}
+  | IDNAME ASSIGN exp ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | atom DOT IDNAME ASSIGN exp ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | atom LPAREN explist RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | IF LPAREN exp RPAREN LBLOCK stmts RBLOCK ELSE LBLOCK stmts RBLOCK reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | WHILE LPAREN exp RPAREN whileblock reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | READLN LPAREN IDNAME RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | PRINTLN LPAREN exp RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
   ;
 reststmts ::= {: RESULT = new ListAST<StmtAST>(); :}
   | stmts:ss {: RESULT = ss; :}
   ;
+whileblock ::= LPAREN RPAREN
+  | LPAREN stmts RPAREN
+  ;
 
-/*
-aexp ::= MINUS aexp:e                     {: RESULT = new BinOpAST("-", new ConstAST(0), e);    :}    %prec UMINUS
-    | aexp:e1 PLUS aexp:e2             {: RESULT = new BinOpAST("+", e1, e2); :}
-    | aexp:e1 MINUS aexp:e2            {: RESULT = new BinOpAST("-", e1, e2); :}
-    | aexp:e1 TIMES aexp:e2            {: RESULT = new BinOpAST("*", e1, e2); :}
-    | aexp:e1 DIV aexp:e2              {: RESULT = new BinOpAST("/", e1, e2); :}
-    | intconst:e	                     {: RESULT = e;     :}
-    | LPAREN aexp:e RPAREN             {: RESULT = e;     :}
-    ;
-    */
+exp ::= atom
+  | stringliteral
+  | intconst
+  | boolconst
+  | aexp
+  | bexp
+  | bop
+  ;
+
+explist ::=
+  | nonemptyexplist
+  ;
+nonemptyexplist ::= exp restexplist
+  ;
+restexplist ::=
+  | COMMA nonemptyexplist
+  ;
+
+aexp ::= MINUS exp %prec UMINUS
+  | exp PLUS exp
+  | exp MINUS exp
+  | exp TIMES exp
+  | exp DIV exp
+  ;
+
+bexp ::= NOT exp
+  | exp AND exp
+  | exp OR exp
+  ;
+
+bop ::= exp LT exp
+  | exp GT exp
+  | exp LEQ exp
+  | exp GEQ exp
+  | exp EQ exp
+  | exp NEQ exp
+  ;
+
+atom ::= NULL
+  | THIS
+  | NEW CLASSNAME LPAREN RPAREN
+  | LPAREN exp RPAREN
+  | IDNAME
+  | atom LPAREN explist RPAREN
+  | atom DOT IDNAME
+  ;
 
 intconst ::= INTCONST:n {: RESULT = new ConstAST(n); :}
   ;

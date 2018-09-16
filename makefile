@@ -7,6 +7,8 @@ compile:
 
 run:
 	java -cp java-cup-11b-runtime.jar:. Parser tests/sample.1.pl
+	java -cp java-cup-11b-runtime.jar:. Parser tests/sample.2.pl
+	java -cp java-cup-11b-runtime.jar:. Parser tests/sample.3.pl
 
 clean:
 	rm Lexer.java Parser.java sym.java

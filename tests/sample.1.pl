@@ -11,13 +11,14 @@ class Something {
   Void performAction(Int x) {
     Int z;
     List linked_list;
-    return z;
+    return z >= omega;
   }
   Float magnitude() {
     Float result;
-    return result;
+    return result.something.k;
+    return (result(abc) + k.something).somethingelse(abc);
     return;
-    return abcde;
+    return aaaaaaaaaaaaaaa + bbbbbbbbbbbbbbbbbbbbbbb * ccccccccccccccc;
   }
 }
 class SomethingElse {

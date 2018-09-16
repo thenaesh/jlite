@@ -89,6 +89,10 @@ ClassName = [A-Z][A-Za-z0-9_]*
     "!="              { return symbol("!=",NEQ); }
     "||"              { return symbol("||",OR); }
     "&&"              { return symbol("&&",AND); }
+    "!"               { return symbol("!",NOT); }
+
+    /* assignment */
+    "="               { return symbol("=", ASSIGN); }
 
     /* blocks and statements */
     "("               { return symbol("(",LPAREN); }

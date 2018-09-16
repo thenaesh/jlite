@@ -95,6 +95,11 @@ class StmtAST extends AST {
     super(type + "stmt");
   }
 }
+class TmpStmtAST extends AST {
+  TmpStmtAST() {
+    super("__TMP__");
+  }
+}
 class ReturnStmtAST extends StmtAST {
   ReturnStmtAST() {
     super("return");
