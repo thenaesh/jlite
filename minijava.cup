@@ -48,7 +48,7 @@ non terminal Pair<ListAST<VarDeclAST>, ListAST<StmtAST>> blockvars;
 non terminal ListAST<StmtAST> stmts, reststmts, whileblock;
 non terminal AST atom;
 non terminal AST exp, aexp, bexp, bop;
-non terminal AST explist, nonemptyexplist, restexplist;
+non terminal ListAST<AST> explist, nonemptyexplist, restexplist;
 non terminal ConstAST<Integer> intconst;
 non terminal ConstAST<Boolean> boolconst;
 non terminal ConstAST<String> stringliteral;
@@ -120,9 +120,9 @@ whileblock ::= LPAREN RPAREN
   ;
 
 exp ::= atom:a {: RESULT = a; :}
-  | stringliteral:s {: RESULT = new ConstAST<String>(s); :}
-  | intconst:n {: RESULT = new ConstAST<Integer>(n); :}
-  | boolconst:b {: RESULT = new ConstAST<Boolean>(b); :}
+  | stringliteral:s {: RESULT = s; :}
+  | intconst:n {: RESULT = n; :}
+  | boolconst:b {: RESULT = b; :}
   | aexp:e {: RESULT = e; :}
   | bexp:e {: RESULT = e; :}
   | bop:e {: RESULT = e; :}
@@ -133,11 +133,11 @@ explist ::= {: RESULT = new ListAST<AST>(); :}
   ;
 nonemptyexplist ::= exp:e restexplist:es {: RESULT = new ListAST<AST>(e, es); :}
   ;
-restexplist ::=
+restexplist ::= {: RESULT = new ListAST<AST>(); :}
   | COMMA nonemptyexplist:es {: RESULT = es; :}
   ;
 
-aexp ::= MINUS exp:e %prec UMINUS {: RESULT = new UnOpAST("-", e); :}
+aexp ::= MINUS exp:e {: RESULT = new UnOpAST("-", e); :} %prec UMINUS
   | exp:a PLUS exp:b {: RESULT = new BinOpAST("+", a, b); :}
   | exp:a MINUS exp:b {: RESULT = new BinOpAST("-", a, b); :}
   | exp:a TIMES exp:b {: RESULT = new BinOpAST("*", a, b); :}

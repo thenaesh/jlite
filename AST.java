@@ -153,9 +153,9 @@ class RefAST extends AST {
 }
 
 class FuncCallAST extends AST {
-  FuncCallAST(String func, ListAST<AST> args) {
+  FuncCallAST(Object func, ListAST<AST> args) {
     super("funccall");
-    this.addOperand("name", "\"" + func + "\"");
+    this.addOperand("function", func);
     this.addOperand("args", args);
   }
 }
