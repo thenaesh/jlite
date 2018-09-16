@@ -119,51 +119,51 @@ whileblock ::= LPAREN RPAREN
   | LPAREN stmts RPAREN
   ;
 
-exp ::= atom
-  | stringliteral
-  | intconst
-  | boolconst
-  | aexp
-  | bexp
-  | bop
+exp ::= atom:a {: RESULT = a; :}
+  | stringliteral:s {: RESULT = new ConstAST<String>(s); :}
+  | intconst:n {: RESULT = new ConstAST<Integer>(n); :}
+  | boolconst:b {: RESULT = new ConstAST<Boolean>(b); :}
+  | aexp:e {: RESULT = e; :}
+  | bexp:e {: RESULT = e; :}
+  | bop:e {: RESULT = e; :}
   ;
 
-explist ::=
-  | nonemptyexplist
+explist ::= {: RESULT = new ListAST<AST>(); :}
+  | nonemptyexplist:es {: RESULT = es; :}
   ;
-nonemptyexplist ::= exp restexplist
+nonemptyexplist ::= exp:e restexplist:es {: RESULT = new ListAST<AST>(e, es); :}
   ;
 restexplist ::=
-  | COMMA nonemptyexplist
+  | COMMA nonemptyexplist:es {: RESULT = es; :}
   ;
 
-aexp ::= MINUS exp %prec UMINUS
-  | exp PLUS exp
-  | exp MINUS exp
-  | exp TIMES exp
-  | exp DIV exp
+aexp ::= MINUS exp:e %prec UMINUS {: RESULT = new UnOpAST("-", e); :}
+  | exp:a PLUS exp:b {: RESULT = new BinOpAST("+", a, b); :}
+  | exp:a MINUS exp:b {: RESULT = new BinOpAST("-", a, b); :}
+  | exp:a TIMES exp:b {: RESULT = new BinOpAST("*", a, b); :}
+  | exp:a DIV exp:b {: RESULT = new BinOpAST("/", a, b); :}
   ;
 
-bexp ::= NOT exp
-  | exp AND exp
-  | exp OR exp
+bexp ::= NOT exp:e {: RESULT = new UnOpAST("!", e); :}
+  | exp:a AND exp:b {: RESULT = new BinOpAST("&&", a, b); :}
+  | exp:a OR exp:b {: RESULT = new BinOpAST("||", a, b); :}
   ;
 
-bop ::= exp LT exp
-  | exp GT exp
-  | exp LEQ exp
-  | exp GEQ exp
-  | exp EQ exp
-  | exp NEQ exp
+bop ::= exp:a LT exp:b {: RESULT = new BinOpAST("<", a, b); :}
+  | exp:a GT exp:b {: RESULT = new BinOpAST(">", a, b); :}
+  | exp:a LEQ exp:b {: RESULT = new BinOpAST("<=", a, b); :}
+  | exp:a GEQ exp:b {: RESULT = new BinOpAST(">=", a, b); :}
+  | exp:a EQ exp:b {: RESULT = new BinOpAST("==", a, b); :}
+  | exp:a NEQ exp:b {: RESULT = new BinOpAST("!=", a, b); :}
   ;
 
-atom ::= NULL
-  | THIS
-  | NEW CLASSNAME LPAREN RPAREN
-  | LPAREN exp RPAREN
-  | IDNAME
-  | atom LPAREN explist RPAREN
-  | atom DOT IDNAME
+atom ::= NULL {: RESULT = new NullPtrAST(); :}
+  | THIS {: RESULT = new ThisPtrAST(); :}
+  | NEW CLASSNAME:c LPAREN RPAREN {: RESULT = new ConstructionAST(c); :}
+  | LPAREN exp:e RPAREN {: RESULT = e; :}
+  | IDNAME:i {: RESULT = new RefAST(i); :}
+  | atom:a LPAREN explist:es RPAREN {: RESULT = new FuncCallAST(a, es); :}
+  | atom:a DOT IDNAME:i {: RESULT = new MemberAccessAST(a, i); :}
   ;
 
 intconst ::= INTCONST:n {: RESULT = new ConstAST(n); :}
