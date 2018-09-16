@@ -3,11 +3,11 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 class AST {
-  public String operator;
+  public String kind;
   public HashMap<String, Object> operands = new HashMap<>();
 
-  public AST(String operator) {
-    this.operator = operator;
+  public AST(String kind) {
+    this.kind = kind;
   }
 
   public void addOperand(String name, Object value) {
@@ -20,7 +20,7 @@ class AST {
     sb.append("{");
 
     // print operator
-    sb.append("\"operator\":\"" + this.operator + "\",");
+    sb.append("\"kind\":\"" + this.kind + "\",");
 
     // recursively print operands
     this.operands.forEach((name, value) -> sb.append("\"" + name + "\":" + value.toString() + ","));
@@ -54,7 +54,7 @@ class ListAST<T> extends AST {
   ListAST() {
     super("listnode");
   }
-  ListAST(T item, ListAST rest) {
+  ListAST(T item, ListAST<T> rest) {
     this();
     this.addOperand("item", item);
     this.addOperand("rest", rest);
@@ -110,17 +110,67 @@ class ReturnStmtAST extends StmtAST {
   }
 }
 
-class ConstAST<T> extends AST {
-  ConstAST(T val) {
-    super("const");
-    this.addOperand("val", val);
+class UnOpAST extends AST {
+  UnOpAST(String name, Object operand) {
+    super("unaryoperation");
+    this.addOperand("operator", "\"" + name + "\"");
+    this.addOperand("operand", operand);
   }
 }
 
 class BinOpAST extends AST {
-  BinOpAST(String operator, AST left, AST right) {
-    super(operator);
+  BinOpAST(String name, Object left, Object right) {
+    super("binaryoperation");
+    this.addOperand("operator", "\"" + name + "\"");
     this.addOperand("left", left);
     this.addOperand("right", right);
+  }
+}
+
+class NullPtrAST extends AST {
+  NullPtrAST() {
+    super("nullptr");
+  }
+}
+class ThisPtrAST extends AST {
+  ThisPtrAST() {
+    super("this");
+  }
+}
+
+class ConstructionAST extends AST {
+  ConstructionAST(String classname) {
+    super("construction");
+    this.operands("classname", "\"" + classname + "\"");
+  }
+}
+
+class RefAST extends AST {
+  RefAST(String id) {
+    super("reference");
+    this.operands("id", "\"" + id + "\"");
+  }
+}
+
+class FuncCallAST extends AST {
+  FuncCallAST(String func, ListAST<ExpAST> args) {
+    super("funccall");
+    this.addOperand("name", "\"" + func + "\"");
+    this.addOperand("args", args);
+  }
+}
+
+class MemberAccessAST extends AST {
+  MemberAccessAST(Object obj, String field) {
+    super("memberaccess");
+    this.addOperand("obj", obj);
+    this.addOperand("field", "\"" + field + "\"");
+  }
+}
+
+class ConstAST<T> extends AST {
+  ConstAST(T val) {
+    super("const");
+    this.addOperand("val", val);
   }
 }
