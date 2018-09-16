@@ -91,8 +91,17 @@ class VarDeclAST extends AST {
 }
 
 class StmtAST extends AST {
-  StmtAST() {
-    super("stmt");
+  StmtAST(String type) {
+    super(type + "stmt");
+  }
+}
+class ReturnStmtAST extends StmtAST {
+  ReturnStmtAST() {
+    super("return");
+  }
+  ReturnStmtAST(Object retval) {
+    this();
+    this.addOperand("retval", retval);
   }
 }
 

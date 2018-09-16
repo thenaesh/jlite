@@ -31,6 +31,7 @@ terminal LT, GT, GEQ, LEQ, EQ, NEQ;
 terminal OR, AND;
 terminal LPAREN, RPAREN, LBLOCK, RBLOCK;
 terminal COMMA, DOT, ENDSTMT;
+terminal RETURN;
 terminal String IDNAME, CLASSNAME;
 
 // non-terminals
@@ -43,8 +44,9 @@ non terminal ListAST<FuncDeclAST> methods;
 non terminal ListAST<VarDeclAST> params, paramlist, nonemptyparamlist, restparamlist;
 non terminal BlockAST block;
 non terminal Pair<ListAST<VarDeclAST>, ListAST<StmtAST>> blockvars;
-non terminal ListAST<StmtAST> stmts;
-non terminal AST expr;
+non terminal ListAST<StmtAST> stmts, reststmts;
+non terminal AST atom;
+non terminal AST exp, bexp, aexp;
 non terminal ConstAST<Integer> intconst;
 non terminal ConstAST<Boolean> boolconst;
 non terminal ConstAST<String> stringliteral;
@@ -92,24 +94,24 @@ block ::= LBLOCK blockvars:bv RBLOCK {: RESULT = new BlockAST(bv.head, bv.tail);
 blockvars ::= stmts:s {: RESULT = new Pair(new ListAST<VarDeclAST>(), s); :}
   |   CLASSNAME:c IDNAME:i ENDSTMT blockvars:r {: RESULT = new Pair(new ListAST(new VarDeclAST(c, i), r.head), r.tail); :}
   ;
-stmts ::= {: RESULT = new ListAST<StmtAST>(); :}
+
+stmts ::= RETURN ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(), ss); :}
+  | RETURN IDNAME:i ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(i), ss); :}
+  ;
+reststmts ::= {: RESULT = new ListAST<StmtAST>(); :}
+  | stmts:ss {: RESULT = ss; :}
   ;
 
 /*
-program   ::=  expr:e     {: RESULT = new ProgramAST(e);  :}
-    ;
-*/
-
-
-expr ::=
-    | expr:e1 PLUS expr:e2             {: RESULT = new BinOpAST("+", e1, e2); :}
-    | expr:e1 MINUS expr:e2            {: RESULT = new BinOpAST("-", e1, e2); :}
-    | expr:e1 TIMES expr:e2            {: RESULT = new BinOpAST("*", e1, e2); :}
-    | expr:e1 DIV expr:e2              {: RESULT = new BinOpAST("/", e1, e2); :}
+aexp ::= MINUS aexp:e                     {: RESULT = new BinOpAST("-", new ConstAST(0), e);    :}    %prec UMINUS
+    | aexp:e1 PLUS aexp:e2             {: RESULT = new BinOpAST("+", e1, e2); :}
+    | aexp:e1 MINUS aexp:e2            {: RESULT = new BinOpAST("-", e1, e2); :}
+    | aexp:e1 TIMES aexp:e2            {: RESULT = new BinOpAST("*", e1, e2); :}
+    | aexp:e1 DIV aexp:e2              {: RESULT = new BinOpAST("/", e1, e2); :}
     | intconst:e	                     {: RESULT = e;     :}
-    | LPAREN expr:e RPAREN             {: RESULT = e;     :}
-    | MINUS expr:e                     {: RESULT = new BinOpAST("-", new ConstAST(0), e);    :}    %prec UMINUS
+    | LPAREN aexp:e RPAREN             {: RESULT = e;     :}
     ;
+    */
 
 intconst ::= INTCONST:n {: RESULT = new ConstAST(n); :}
   ;

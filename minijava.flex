@@ -69,6 +69,7 @@ ClassName = [A-Z][A-Za-z0-9_]*
     "new"             { return symbol("new", NEW); }
     "null"            { return symbol("null", NULL); }
     "Void main"       { return symbol("mainfunc", MAINFUNC); }
+    "return"          { return symbol("return", RETURN); }
 
     /* literals */
     {IntLiteral}      { return symbol("IntConst",INTCONST, new Integer(Integer.parseInt(yytext()))); }
