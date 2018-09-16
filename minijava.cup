@@ -41,7 +41,9 @@ non terminal ListAST<ClassAST> classes;
 non terminal Pair<ListAST<VarDeclAST>, ListAST<FuncDeclAST>> varsmethods, vars;
 non terminal ListAST<FuncDeclAST> methods;
 non terminal ListAST<VarDeclAST> params, paramlist, nonemptyparamlist, restparamlist;
-non terminal AST block, stmts;
+non terminal BlockAST block;
+non terminal Pair<ListAST<VarDeclAST>, ListAST<StmtAST>> blockvars;
+non terminal ListAST<StmtAST> stmts;
 non terminal AST expr;
 non terminal ConstAST<Integer> intconst;
 non terminal ConstAST<Boolean> boolconst;
@@ -58,7 +60,7 @@ program ::= mainclass:mc classes:cs {:  RESULT = new ProgramAST(mc, cs); :};
 
 // main class handling
 mainclass ::= CLASS CLASSNAME:c LBLOCK mainfunction:f RBLOCK {: RESULT = new ClassAST(c, new ListAST<VarDeclAST>(), new ListAST(f)); :} ;
-mainfunction ::= MAINFUNC params:ps block {: RESULT = new FuncDeclAST("Void", "main", ps); :};
+mainfunction ::= MAINFUNC params:ps block:b {: RESULT = new FuncDeclAST("Void", "main", ps, b); :};
 
 // general class handling
 classes ::= {: RESULT = new ListAST<ClassAST>(); :}
@@ -71,7 +73,7 @@ vars ::= CLASSNAME:c IDNAME:i ENDSTMT vars:r {: RESULT = new Pair(new ListAST(ne
   | methods:m {: RESULT = new Pair(new ListAST<VarDeclAST>(), m); :}
   ;
 methods ::= RBLOCK {: RESULT = new ListAST<FuncDeclAST>(); :}
-  | CLASSNAME:c IDNAME:i params:ps block methods:m {: RESULT = new ListAST(new FuncDeclAST(c, i, ps), m); :}
+  | CLASSNAME:c IDNAME:i params:ps block:b methods:m {: RESULT = new ListAST(new FuncDeclAST(c, i, ps, b), m); :}
   ;
 
 params ::= LPAREN paramlist:ps RPAREN {: RESULT = ps; :}
@@ -86,8 +88,11 @@ restparamlist ::= {: RESULT = new ListAST<VarDeclAST>(); :}
  ;
 
 // method body handling
-block ::= LBLOCK stmts RBLOCK;
-stmts ::= //empty
+block ::= LBLOCK blockvars:bv RBLOCK {: RESULT = new BlockAST(bv.head, bv.tail); :};
+blockvars ::= stmts:s {: RESULT = new Pair(new ListAST<VarDeclAST>(), s); :}
+  |   CLASSNAME:c IDNAME:i ENDSTMT blockvars:r {: RESULT = new Pair(new ListAST(new VarDeclAST(c, i), r.head), r.tail); :}
+  ;
+stmts ::= {: RESULT = new ListAST<StmtAST>(); :}
   ;
 
 /*

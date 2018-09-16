@@ -41,18 +41,12 @@ class ProgramAST extends AST {
   }
 }
 
-class ConstAST<T> extends AST {
-  ConstAST(T val) {
-    super("const");
-    this.addOperand("val", val);
-  }
-}
-
-class BinOpAST extends AST {
-  BinOpAST(String operator, AST left, AST right) {
-    super(operator);
-    this.addOperand("left", left);
-    this.addOperand("right", right);
+class ClassAST extends AST {
+  ClassAST(String name, ListAST<VarDeclAST> members, ListAST<FuncDeclAST> methods) {
+    super("classdecl");
+    this.addOperand("name", "\"" + name + "\"");
+    this.addOperand("members", members);
+    this.addOperand("methods", methods);
   }
 }
 
@@ -70,6 +64,24 @@ class ListAST<T> extends AST {
   }
 }
 
+class FuncDeclAST extends AST {
+  FuncDeclAST(String returntype, String name, ListAST<VarDeclAST> params, BlockAST body) {
+    super("funcdecl");
+    this.addOperand("returntype", "\"" + returntype + "\"");
+    this.addOperand("name", "\"" + name + "\"");
+    this.addOperand("params", params);
+    this.addOperand("body", body);
+  }
+}
+
+class BlockAST extends AST {
+  BlockAST(ListAST<VarDeclAST> vardecls, ListAST<StmtAST> stmts) {
+    super("block");
+    this.addOperand("vardecls", vardecls);
+    this.addOperand("stmts", stmts);
+  }
+}
+
 class VarDeclAST extends AST {
   VarDeclAST(String type, String name) {
     super("vardecl");
@@ -78,20 +90,23 @@ class VarDeclAST extends AST {
   }
 }
 
-class FuncDeclAST extends AST {
-  FuncDeclAST(String returntype, String name, ListAST<VarDeclAST> params) {
-    super("funcdecl");
-    this.addOperand("returntype", "\"" + returntype + "\"");
-    this.addOperand("name", "\"" + name + "\"");
-    this.addOperand("params", params);
+class StmtAST extends AST {
+  StmtAST() {
+    super("stmt");
   }
 }
 
-class ClassAST extends AST {
-  ClassAST(String name, ListAST<VarDeclAST> members, ListAST<FuncDeclAST> methods) {
-    super("classdecl");
-    this.addOperand("name", "\"" + name + "\"");
-    this.addOperand("members", members);
-    this.addOperand("methods", methods);
+class ConstAST<T> extends AST {
+  ConstAST(T val) {
+    super("const");
+    this.addOperand("val", val);
+  }
+}
+
+class BinOpAST extends AST {
+  BinOpAST(String operator, AST left, AST right) {
+    super(operator);
+    this.addOperand("left", left);
+    this.addOperand("right", right);
   }
 }
