@@ -141,19 +141,19 @@ class ThisPtrAST extends AST {
 class ConstructionAST extends AST {
   ConstructionAST(String classname) {
     super("construction");
-    this.operands("classname", "\"" + classname + "\"");
+    this.addOperand("classname", "\"" + classname + "\"");
   }
 }
 
 class RefAST extends AST {
   RefAST(String id) {
     super("reference");
-    this.operands("id", "\"" + id + "\"");
+    this.addOperand("id", "\"" + id + "\"");
   }
 }
 
 class FuncCallAST extends AST {
-  FuncCallAST(String func, ListAST<ExpAST> args) {
+  FuncCallAST(String func, ListAST<AST> args) {
     super("funccall");
     this.addOperand("name", "\"" + func + "\"");
     this.addOperand("args", args);
