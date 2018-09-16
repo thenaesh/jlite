@@ -95,11 +95,21 @@ class StmtAST extends AST {
     super(type + "stmt");
   }
 }
+
 class TmpStmtAST extends AST {
   TmpStmtAST() {
     super("__TMP__");
   }
 }
+
+class AssignStmtAST extends StmtAST {
+  AssignStmtAST(Object assignee, Object val) {
+    super("assignment");
+    this.addOperand("assignee", assignee);
+    this.addOperand("val", val);
+  }
+}
+
 class ReturnStmtAST extends StmtAST {
   ReturnStmtAST() {
     super("return");
@@ -107,6 +117,23 @@ class ReturnStmtAST extends StmtAST {
   ReturnStmtAST(Object retval) {
     this();
     this.addOperand("retval", retval);
+  }
+}
+
+class IfStmtAST extends StmtAST {
+  IfStmtAST(Object condition, ListAST<StmtAST> successblock, ListAST<StmtAST> failureblock) {
+    super("if");
+    this.addOperand("condtion", condition);
+    this.addOperand("successblock", successblock);
+    this.addOperand("failureblock", failureblock);
+  }
+}
+
+class WhileStmtAST extends AST {
+  WhileStmtAST(Object condition, ListAST<StmtAST> block) {
+    super("while");
+    this.addOperand("condition", condition);
+    this.addOperand("block", block);
   }
 }
 

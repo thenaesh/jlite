@@ -103,20 +103,20 @@ blockvars ::= stmts:s {: RESULT = new Pair(new ListAST<VarDeclAST>(), s); :}
   ;
 
 stmts ::= RETURN ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(), ss); :}
-  | RETURN exp ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(), ss); :}
-  | IDNAME ASSIGN exp ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
-  | atom DOT IDNAME ASSIGN exp ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
-  | atom LPAREN explist RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
-  | IF LPAREN exp RPAREN LBLOCK stmts RBLOCK ELSE LBLOCK stmts RBLOCK reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
-  | WHILE LPAREN exp RPAREN whileblock reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
-  | READLN LPAREN IDNAME RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
-  | PRINTLN LPAREN exp RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new TmpStmtAST(), ss); :}
+  | RETURN exp:e ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(e), ss); :}
+  | IDNAME:i ASSIGN exp:e ENDSTMT reststmts:ss {: RESULT = new ListAST(new AssignStmtAST(new RefAST(i), e), ss); :}
+  | atom:a DOT IDNAME:i ASSIGN exp:e ENDSTMT reststmts:ss {: RESULT = new ListAST(new AssignStmtAST(new MemberAccessAST(a, i), e), ss); :}
+  | atom:a LPAREN explist:es RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new FuncCallAST(a, es), ss); :}
+  | IF LPAREN exp:e RPAREN LBLOCK stmts:ssif RBLOCK ELSE LBLOCK stmts:sselse RBLOCK reststmts:ss {: RESULT = new ListAST(new IfStmtAST(e, ssif, sselse), ss); :}
+  | WHILE LPAREN exp:e RPAREN whileblock:blk reststmts:ss {: RESULT = new ListAST(new WhileStmtAST(e, blk), ss); :}
+  | READLN LPAREN IDNAME:i RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new FuncCallAST("readln", new ListAST<AST>(new RefAST(i))), ss); :}
+  | PRINTLN LPAREN exp:e RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new FuncCallAST("println", new ListAST<AST>(e)), ss); :}
   ;
 reststmts ::= {: RESULT = new ListAST<StmtAST>(); :}
   | stmts:ss {: RESULT = ss; :}
   ;
-whileblock ::= LPAREN RPAREN
-  | LPAREN stmts RPAREN
+whileblock ::= LBLOCK RBLOCK {: RESULT = new ListAST<StmtAST>(); :}
+  | LBLOCK stmts:ss RBLOCK {: RESULT = ss; :}
   ;
 
 exp ::= atom:a {: RESULT = a; :}
