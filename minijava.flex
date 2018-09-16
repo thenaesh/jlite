@@ -54,6 +54,8 @@ ClassName = [A-Z][A-Za-z0-9_]*
 
 
 %state STRING
+%state BLOCKCOMMENT
+%state LINECOMMENT
 
 %%
 
@@ -110,6 +112,8 @@ ClassName = [A-Z][A-Za-z0-9_]*
     {white_space}     { /* ignore */ }
 
     "\""              { string.setLength(0); yybegin(STRING); }
+    "/*"              { yybegin(BLOCKCOMMENT); }
+    "//"              { yybegin(LINECOMMENT); }
 }
 
 <STRING> {
@@ -122,6 +126,16 @@ ClassName = [A-Z][A-Za-z0-9_]*
     \\r                            { string.append('\r'); }
     \\\"                           { string.append('\"'); }
     \\                             { string.append('\\'); }
+}
+
+<BLOCKCOMMENT> {
+  "*/"                             { yybegin(YYINITIAL); }
+  [^]                              {}
+}
+
+<LINECOMMENT> {
+  \n                             { yybegin(YYINITIAL); }
+  [^]                              {}
 }
 
 /* error fallback */
