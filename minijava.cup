@@ -42,7 +42,9 @@ non terminal Pair<ListAST<VarDeclAST>, ListAST<FuncDeclAST>> varsmethods, vars, 
 non terminal ListAST<VarDeclAST> params, paramlist, nonemptyparamlist, restparamlist;
 non terminal AST block, stmts;
 non terminal AST expr;
-non terminal AST intconst, boolconst, stringliteral;
+non terminal ConstAST<Integer> intconst;
+non terminal ConstAST<Boolean> boolconst;
+non terminal ConstAST<String> stringliteral;
 
 // precedence
 precedence left CLASS, IDNAME, CLASSNAME;
@@ -64,11 +66,9 @@ classes ::= {: RESULT = new ListAST<ClassAST>(); :}
 
 varsmethods ::= LBLOCK vars:vs {: RESULT = vs; :}
   ;
-
 vars ::= CLASSNAME:c IDNAME:i ENDSTMT vars:r {: RESULT = new Pair(new ListAST(new VarDeclAST(c, i), r.head), r.tail); :}
   | methods:r {: RESULT = new Pair(new ListAST<VarDeclAST>(), r.tail); :}
   ;
-
 methods ::= RBLOCK {: RESULT = new Pair(new ListAST<VarDeclAST>(), new ListAST<FuncDeclAST>()); :}
   | CLASSNAME:c IDNAME:i params:ps block methods:r {: RESULT = new Pair(r.head, new ListAST(new FuncDeclAST(c, i, ps), r.tail)); :}
   ;
