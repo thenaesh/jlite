@@ -1,0 +1,20 @@
+class Main {
+    Void main(Int x, Int y, Int z) {
+        Int x;
+        Box b;
+        b.x = 2;
+        b.y = -(3 + b.x);
+        b.z = 5;
+        println(b.x);
+        readln(x);
+    }
+}
+
+class Box {
+    Int x;
+    Int y;
+    Int z;
+    Int vol() {
+        return x * y * z;
+    }
+}
