@@ -109,8 +109,8 @@ stmts ::= RETURN ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReturnStmtAST(
   | atom:a LPAREN explist:es RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new FuncCallAST(a, es), ss); :}
   | IF LPAREN exp:e RPAREN LBLOCK stmts:ssif RBLOCK ELSE LBLOCK stmts:sselse RBLOCK reststmts:ss {: RESULT = new ListAST(new IfStmtAST(e, ssif, sselse), ss); :}
   | WHILE LPAREN exp:e RPAREN whileblock:blk reststmts:ss {: RESULT = new ListAST(new WhileStmtAST(e, blk), ss); :}
-  | READLN LPAREN IDNAME:i RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new FuncCallAST("readln", new ListAST<AST>(new RefAST(i))), ss); :}
-  | PRINTLN LPAREN exp:e RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new FuncCallAST("println", new ListAST<AST>(e)), ss); :}
+  | READLN LPAREN IDNAME:i RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new ReadlnAST(new RefAST(i)), ss); :}
+  | PRINTLN LPAREN exp:e RPAREN ENDSTMT reststmts:ss {: RESULT = new ListAST(new PrintlnAST(e), ss); :}
   ;
 reststmts ::= {: RESULT = new ListAST<StmtAST>(); :}
   | stmts:ss {: RESULT = ss; :}

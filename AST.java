@@ -74,6 +74,20 @@ class FuncDeclAST extends AST {
   }
 }
 
+class PrintlnAST extends AST {
+  PrintlnAST(AST output) {
+    super("printdecl");
+    this.addOperand("output", output);
+  }
+}
+
+class ReadlnAST extends AST {
+  ReadlnAST(RefAST input) {
+    super("readdecl");
+    this.addOperand("input", input);
+  }
+}
+
 class BlockAST extends AST {
   BlockAST(ListAST<VarDeclAST> vardecls, ListAST<StmtAST> stmts) {
     super("block");
@@ -103,7 +117,7 @@ class TmpStmtAST extends AST {
 }
 
 class AssignStmtAST extends StmtAST {
-  AssignStmtAST(Object assignee, Object val) {
+  AssignStmtAST(AST assignee, AST val) {
     super("assignment");
     this.addOperand("assignee", assignee);
     this.addOperand("val", val);
@@ -114,14 +128,14 @@ class ReturnStmtAST extends StmtAST {
   ReturnStmtAST() {
     super("return");
   }
-  ReturnStmtAST(Object retval) {
+  ReturnStmtAST(AST retval) {
     this();
     this.addOperand("retval", retval);
   }
 }
 
 class IfStmtAST extends StmtAST {
-  IfStmtAST(Object condition, ListAST<StmtAST> successblock, ListAST<StmtAST> failureblock) {
+  IfStmtAST(AST condition, ListAST<StmtAST> successblock, ListAST<StmtAST> failureblock) {
     super("if");
     this.addOperand("condtion", condition);
     this.addOperand("successblock", successblock);
@@ -130,7 +144,7 @@ class IfStmtAST extends StmtAST {
 }
 
 class WhileStmtAST extends AST {
-  WhileStmtAST(Object condition, ListAST<StmtAST> block) {
+  WhileStmtAST(AST condition, ListAST<StmtAST> block) {
     super("while");
     this.addOperand("condition", condition);
     this.addOperand("block", block);
@@ -138,7 +152,7 @@ class WhileStmtAST extends AST {
 }
 
 class UnOpAST extends AST {
-  UnOpAST(String name, Object operand) {
+  UnOpAST(String name, AST operand) {
     super("unaryoperation");
     this.addOperand("operator", "\"" + name + "\"");
     this.addOperand("operand", operand);
@@ -146,7 +160,7 @@ class UnOpAST extends AST {
 }
 
 class BinOpAST extends AST {
-  BinOpAST(String name, Object left, Object right) {
+  BinOpAST(String name, AST left, AST right) {
     super("binaryoperation");
     this.addOperand("operator", "\"" + name + "\"");
     this.addOperand("left", left);
@@ -180,7 +194,7 @@ class RefAST extends AST {
 }
 
 class FuncCallAST extends AST {
-  FuncCallAST(Object func, ListAST<AST> args) {
+  FuncCallAST(AST func, ListAST<AST> args) {
     super("funccall");
     this.addOperand("function", func);
     this.addOperand("args", args);
@@ -188,7 +202,7 @@ class FuncCallAST extends AST {
 }
 
 class MemberAccessAST extends AST {
-  MemberAccessAST(Object obj, String field) {
+  MemberAccessAST(AST obj, String field) {
     super("memberaccess");
     this.addOperand("obj", obj);
     this.addOperand("field", "\"" + field + "\"");
