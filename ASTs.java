@@ -140,26 +140,48 @@ class FuncDeclAST extends AST {
     public BlockAST body;
 }
 
-class PrintlnAST extends AST {
-    PrintlnAST(AST output) {
-        super("printdecl");
-        this.addOperand("output", output);
-    }
-}
-
-class ReadlnAST extends AST {
-    ReadlnAST(RefAST input) {
-        super("readdecl");
-        this.addOperand("input", input);
-    }
-}
-
 class BlockAST extends AST {
     BlockAST(ListAST<VarDeclAST> vardecls, ListAST<StmtAST> stmts) {
         super("block");
         this.addOperand("vardecls", vardecls);
         this.addOperand("stmts", stmts);
+        this.vardecls = vardecls.convertToArrayList();
+        this.stmts = stmts.convertToArrayList();
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        // print var declarations
+        sb.append("\"vardecls\":[");
+        for (VarDeclAST var: this.vardecls) {
+            sb.append(var.toString());
+            sb.append(',');
+        }
+        if (!this.vardecls.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+        sb.append(",");
+
+        // print statements
+        sb.append("\"stmts\":[");
+        for (StmtAST stmt : this.stmts) {
+            sb.append(stmt.toString());
+            sb.append(',');
+        }
+        if (!this.stmts.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public ArrayList<VarDeclAST> vardecls;
+    public ArrayList<StmtAST> stmts;
 }
 
 class VarDeclAST extends AST {
@@ -207,14 +229,79 @@ class IfStmtAST extends StmtAST {
         this.addOperand("condtion", condition);
         this.addOperand("successblock", successblock);
         this.addOperand("failureblock", failureblock);
+        this.condition = condition;
+        this.successblock = new BlockAST(new ListAST<>(), successblock);
+        this.failureblock = new BlockAST(new ListAST<>(), failureblock);
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":" + this.kind + ",");
+
+        // print condition
+        sb.append("\"condition\":" + this.condition.toString() + ",");
+
+        // print success block
+        sb.append("\"successblock\":" + this.successblock.toString() + ",");
+
+        // print failure block
+        sb.append("\"failureblock\":" + this.failureblock.toString() + ",");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST condition;
+    public BlockAST successblock;
+    public BlockAST failureblock;
 }
 
-class WhileStmtAST extends AST {
+class WhileStmtAST extends StmtAST {
     WhileStmtAST(AST condition, ListAST<StmtAST> block) {
         super("while");
         this.addOperand("condition", condition);
         this.addOperand("block", block);
+        this.condition = condition;
+        this.block = new BlockAST(new ListAST<>(), block);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        // print condition
+        sb.append("\"condition\":" + this.condition.toString() + ",");
+
+        // print block
+        sb.append("\"block\":" + this.block.toString() + ",");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST condition;
+    public BlockAST block;
+}
+
+class PrintlnAST extends StmtAST {
+    PrintlnAST(AST output) {
+        super("print");
+        this.addOperand("output", output);
+    }
+}
+
+class ReadlnAST extends StmtAST {
+    ReadlnAST(RefAST input) {
+        super("read");
+        this.addOperand("input", input);
     }
 }
 
@@ -266,7 +353,36 @@ class FuncCallAST extends AST {
         super("funccall");
         this.addOperand("function", func);
         this.addOperand("args", args);
+        this.func = func;
+        this.args = args.convertToArrayList();
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        // print func
+        sb.append("\"func\":" + this.func.toString() + ",");
+
+        // print args
+        sb.append("\"args\":[");
+        for (AST arg : this.args) {
+            sb.append(arg.toString());
+            sb.append(',');
+        }
+        if (!this.args.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST func;
+    public ArrayList<AST> args;
 }
 
 class MemberAccessAST extends AST {
