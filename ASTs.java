@@ -1,9 +1,42 @@
+import java.util.ArrayList;
+
 class ProgramAST extends AST {
     ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) {
         super("__program__");
         this.addOperand("mainclass", mainclass);
         this.addOperand("classes", classes);
+        this.mainClass = mainclass;
+        this.classes = classes.convertToArrayList();
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        // print main class
+        sb.append("\"mainClass\":");
+        sb.append(this.mainClass.toString());
+        sb.append(",");
+
+        // print other classes
+        sb.append("\"classes\":[");
+        for (ClassAST cls : this.classes) {
+            sb.append(cls.toString());
+            sb.append(',');
+        }
+        if (!this.classes.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public ClassAST mainClass;
+    public ArrayList<ClassAST> classes;
 }
 
 class ClassAST extends AST {
@@ -12,7 +45,48 @@ class ClassAST extends AST {
         this.addOperand("name", "\"" + name + "\"");
         this.addOperand("members", members);
         this.addOperand("methods", methods);
+        this.name = name;
+        this.members = members.convertToArrayList();
+        this.methods = methods.convertToArrayList();
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        // print class name
+        sb.append("\"classname\":\"" + this.name + "\",");
+
+        // print members 
+        sb.append("\"members\":[");
+        for (VarDeclAST var: this.members) {
+            sb.append(var.toString());
+            sb.append(',');
+        }
+        if (!this.members.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+        sb.append(",");
+
+        // print methods
+        sb.append("\"methods\":[");
+        for (FuncDeclAST func : this.methods) {
+            sb.append(func.toString());
+            sb.append(',');
+        }
+        if (!this.methods.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public String name;
+    public ArrayList<VarDeclAST> members;
+    public ArrayList<FuncDeclAST> methods;
 }
 
 class FuncDeclAST extends AST {
@@ -22,7 +96,48 @@ class FuncDeclAST extends AST {
         this.addOperand("name", "\"" + name + "\"");
         this.addOperand("params", params);
         this.addOperand("body", body);
+        this.name = name;
+        this.returntype = returntype;
+        this.params = params.convertToArrayList();
+        this.body = body;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        // print function name
+        sb.append("\"funcname\":\"" + this.name + "\",");
+
+        // print return type
+        sb.append("\"returntype\":\"" + this.returntype + "\",");
+
+        // print params
+        sb.append("\"members\":[");
+        for (VarDeclAST var: this.params) {
+            sb.append(var.toString());
+            sb.append(',');
+        }
+        if (!this.params.isEmpty()) sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+        sb.append(",");
+
+        // print body
+        sb.append("\"body\":");
+        sb.append(this.body.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public String name;
+    public String returntype;
+    public ArrayList<VarDeclAST> params;
+    public BlockAST body;
 }
 
 class PrintlnAST extends AST {
