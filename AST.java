@@ -41,12 +41,6 @@ abstract class AST {
     }
 }
 
-class DistinctNamesCheckingException extends Exception {
-    DistinctNamesCheckingException(String err) {
-        super(err);
-    }
-}
-
 /**
  * Linked list AST class for temporary use while parsing various list productions.
  * Must NOT be present in the final AST.
