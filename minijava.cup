@@ -49,9 +49,9 @@ non terminal ListAST<StmtAST> stmts, reststmts, whileblock;
 non terminal AST atom;
 non terminal AST exp, aexp, bexp, bop;
 non terminal ListAST<AST> explist, nonemptyexplist, restexplist;
-non terminal ConstAST<Integer> intconst;
-non terminal ConstAST<Boolean> boolconst;
-non terminal ConstAST<String> stringliteral;
+non terminal IntAST intconst;
+non terminal BoolAST boolconst;
+non terminal StringAST stringliteral;
 
 // precedence
 precedence left ASSIGN;
@@ -166,9 +166,9 @@ atom ::= NULL {: RESULT = new NullPtrAST(); :}
   | atom:a DOT IDNAME:i {: RESULT = new MemberAccessAST(a, i); :}
   ;
 
-intconst ::= INTCONST:n {: RESULT = new ConstAST(n); :}
+intconst ::= INTCONST:n {: RESULT = new IntAST(n); :}
   ;
-boolconst ::= BOOLCONST:b {: RESULT = new ConstAST(b); :}
+boolconst ::= BOOLCONST:b {: RESULT = new BoolAST(b); :}
   ;
-stringliteral ::= STRING_LITERAL:s {: RESULT = new ConstAST(s); :}
+stringliteral ::= STRING_LITERAL:s {: RESULT = new StringAST(s); :}
   ;

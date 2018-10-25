@@ -575,9 +575,42 @@ class MemberAccessAST extends AST {
     }
 }
 
-class ConstAST<T> extends AST {
-    ConstAST(T val) {
-        super("const");
-        this.addOperand("val", val);
+class IntAST extends AST {
+    public IntAST(Integer val) {
+        super("intconst");
+        this.val = val;
     }
+
+    @Override
+    public String toString() {
+        return "" + val;
+    }
+
+    public Integer val;
+}
+class BoolAST extends AST {
+    public BoolAST(Boolean val) {
+        super("boolconst");
+        this.val = val;
+    }
+
+    @Override
+    public String toString() {
+        return "" + val;
+    }
+
+    public Boolean val;
+}
+class StringAST extends AST {
+    public StringAST(String val) {
+        super("stringconst");
+        this.val = val;
+    }
+
+    @Override
+    public String toString() {
+        return "\"" + val + "\"";
+    }
+
+    public String val;
 }

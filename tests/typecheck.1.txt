@@ -2,7 +2,7 @@ class Main {
     Void main(Int x, Int y, Int z) {
         Int x;
         Box b;
-        b.x = 2;
+        b.x = "abc";
         b.y = -(3 + b.x);
         b.z = 5;
         println(b.x);
