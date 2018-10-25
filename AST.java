@@ -9,10 +9,12 @@ import java.util.HashMap;
 
 abstract class AST {
     public String kind;
+    public String __type__;
     public HashMap<String, Object> operands = new HashMap<>();
 
     public AST(String kind) {
         this.kind = kind;
+        this.__type__ = "NONE";
     }
 
     public void addOperand(String name, Object value) {
@@ -97,8 +99,6 @@ class ListAST<T> extends AST {
 class ProgramAST extends AST {
     ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) throws DistinctNamesCheckingException {
         super("__program__");
-        this.addOperand("mainclass", mainclass);
-        this.addOperand("classes", classes);
         this.mainClass = mainclass;
         this.classes = classes.convertToArrayList();
 
@@ -184,9 +184,6 @@ class ProgramAST extends AST {
 class ClassAST extends AST {
     ClassAST(String name, ListAST<VarDeclAST> members, ListAST<FuncDeclAST> methods) {
         super("classdecl");
-        this.addOperand("name", "\"" + name + "\"");
-        this.addOperand("members", members);
-        this.addOperand("methods", methods);
         this.name = name;
         this.members = members.convertToArrayList();
         this.methods = methods.convertToArrayList();
@@ -258,10 +255,6 @@ class ClassAST extends AST {
 class FuncDeclAST extends AST {
     FuncDeclAST(String returntype, String name, ListAST<VarDeclAST> params, BlockAST body) {
         super("funcdecl");
-        this.addOperand("returntype", "\"" + returntype + "\"");
-        this.addOperand("name", "\"" + name + "\"");
-        this.addOperand("params", params);
-        this.addOperand("body", body);
         this.name = name;
         this.returntype = returntype;
         this.params = params.convertToArrayList();
@@ -283,7 +276,7 @@ class FuncDeclAST extends AST {
         sb.append("\"returntype\":\"" + this.returntype + "\",");
 
         // print params
-        sb.append("\"members\":[");
+        sb.append("\"params\":[");
         for (VarDeclAST var: this.params) {
             sb.append(var.toString());
             sb.append(',');
@@ -320,8 +313,6 @@ class FuncDeclAST extends AST {
 class BlockAST extends AST {
     BlockAST(ListAST<VarDeclAST> vardecls, ListAST<StmtAST> stmts) {
         super("block");
-        this.addOperand("vardecls", vardecls);
-        this.addOperand("stmts", stmts);
         this.vardecls = vardecls.convertToArrayList();
         this.stmts = stmts.convertToArrayList();
     }
@@ -364,10 +355,23 @@ class BlockAST extends AST {
 class VarDeclAST extends AST {
     VarDeclAST(String type, String name) {
         super("vardecl");
-        this.addOperand("type", "\"" + type + "\"");
-        this.addOperand("name", "\"" + name + "\"");
         this.type = type;
         this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"name\":\"" + this.name + "\",");
+        sb.append("\"type\":\"" + this.type + "\"");
+
+        sb.append("}");
+        return sb.toString();
     }
 
     public String type;
@@ -389,28 +393,59 @@ class TmpStmtAST extends AST {
 class AssignStmtAST extends StmtAST {
     AssignStmtAST(AST assignee, AST val) {
         super("assignment");
-        this.addOperand("assignee", assignee);
-        this.addOperand("val", val);
+        this.assignee = assignee;
+        this.val = val;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"assignee\":" + this.assignee.toString() + ",");
+        sb.append("\"val\":" + this.val.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST assignee;
+    public AST val;
 }
 
 class ReturnStmtAST extends StmtAST {
     ReturnStmtAST() {
-        super("return");
+        this(VoidAST.value);
     }
 
     ReturnStmtAST(AST retval) {
-        this();
-        this.addOperand("retval", retval);
+        super("return");
+        this.retval = retval;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"retval\":" + this.retval.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST retval;
 }
 
 class IfStmtAST extends StmtAST {
     IfStmtAST(AST condition, ListAST<StmtAST> successblock, ListAST<StmtAST> failureblock) {
         super("if");
-        this.addOperand("condtion", condition);
-        this.addOperand("successblock", successblock);
-        this.addOperand("failureblock", failureblock);
         this.condition = condition;
         this.successblock = new BlockAST(new ListAST<>(), successblock);
         this.failureblock = new BlockAST(new ListAST<>(), failureblock);
@@ -422,7 +457,7 @@ class IfStmtAST extends StmtAST {
         sb.append("{");
 
         // print kind
-        sb.append("\"kind\":" + this.kind + ",");
+        sb.append("\"kind\":\"" + this.kind + "\",");
 
         // print condition
         sb.append("\"condition\":" + this.condition.toString() + ",");
@@ -431,7 +466,7 @@ class IfStmtAST extends StmtAST {
         sb.append("\"successblock\":" + this.successblock.toString() + ",");
 
         // print failure block
-        sb.append("\"failureblock\":" + this.failureblock.toString() + ",");
+        sb.append("\"failureblock\":" + this.failureblock.toString());
 
         sb.append("}");
         return sb.toString();
@@ -445,8 +480,6 @@ class IfStmtAST extends StmtAST {
 class WhileStmtAST extends StmtAST {
     WhileStmtAST(AST condition, ListAST<StmtAST> block) {
         super("while");
-        this.addOperand("condition", condition);
-        this.addOperand("block", block);
         this.condition = condition;
         this.block = new BlockAST(new ListAST<>(), block);
     }
@@ -463,7 +496,7 @@ class WhileStmtAST extends StmtAST {
         sb.append("\"condition\":" + this.condition.toString() + ",");
 
         // print block
-        sb.append("\"block\":" + this.block.toString() + ",");
+        sb.append("\"block\":" + this.block.toString());
 
         sb.append("}");
         return sb.toString();
@@ -476,37 +509,123 @@ class WhileStmtAST extends StmtAST {
 class PrintlnAST extends StmtAST {
     PrintlnAST(AST output) {
         super("print");
-        this.addOperand("output", output);
+        this.__type__ = "Void";
+        this.output = output;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"output\":" + this.output.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST output;
 }
 
 class ReadlnAST extends StmtAST {
     ReadlnAST(RefAST input) {
         super("read");
-        this.addOperand("input", input);
+        this.__type__ = "Void";
+        this.input = input;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"input\":" + this.input.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public RefAST input;
 }
 
 class UnOpAST extends AST {
     UnOpAST(String name, AST operand) {
         super("unaryoperation");
-        this.addOperand("operator", "\"" + name + "\"");
-        this.addOperand("operand", operand);
+        this.name = name;
+        this.operand = operand;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"name\":\"" + this.name + "\",");
+        sb.append("\"operand\":" + this.operand.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public String name;
+    public AST operand;
 }
 
 class BinOpAST extends AST {
     BinOpAST(String name, AST left, AST right) {
         super("binaryoperation");
-        this.addOperand("operator", "\"" + name + "\"");
-        this.addOperand("left", left);
-        this.addOperand("right", right);
+        this.name = name;
+        this.left = left;
+        this.right = right;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"name\":\"" + this.name + "\",");
+        sb.append("\"left\":" + this.left.toString() + ",");
+        sb.append("\"right\":" + this.right.toString());
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public String name;
+    public AST left;
+    public AST right;
 }
 
 class NullPtrAST extends AST {
     NullPtrAST() {
         super("nullptr");
+        this.__type__ = "*";
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\"");
+
+
+        sb.append("}");
+        return sb.toString();
     }
 }
 
@@ -514,27 +633,56 @@ class ThisPtrAST extends AST {
     ThisPtrAST() {
         super("this");
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\"");
+
+
+        sb.append("}");
+        return sb.toString();
+    }
 }
 
 class ConstructionAST extends AST {
     ConstructionAST(String classname) {
         super("construction");
-        this.addOperand("classname", "\"" + classname + "\"");
+        this.classname = classname;
     }
+
+    public String classname;
 }
 
 class RefAST extends AST {
     RefAST(String id) {
         super("reference");
-        this.addOperand("id", "\"" + id + "\"");
+        this.id = id;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"id\":\"" + this.id + "\"");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public String id;
 }
 
 class FuncCallAST extends AST {
     FuncCallAST(AST func, ListAST<AST> args) {
         super("funccall");
-        this.addOperand("function", func);
-        this.addOperand("args", args);
         this.func = func;
         this.args = args.convertToArrayList();
     }
@@ -570,15 +718,34 @@ class FuncCallAST extends AST {
 class MemberAccessAST extends AST {
     MemberAccessAST(AST obj, String field) {
         super("memberaccess");
-        this.addOperand("obj", obj);
-        this.addOperand("field", "\"" + field + "\"");
+        this.obj = obj;
+        this.field = field;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        // print kind
+        sb.append("\"kind\":\"" + this.kind + "\",");
+
+        sb.append("\"obj\":" + this.obj.toString() + ",");
+        sb.append("\"field\":\"" + this.field + "\"");
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public AST obj;
+    public String field;
 }
 
 class IntAST extends AST {
     public IntAST(Integer val) {
         super("intconst");
         this.val = val;
+        this.__type__ = "Int";
     }
 
     @Override
@@ -592,6 +759,7 @@ class BoolAST extends AST {
     public BoolAST(Boolean val) {
         super("boolconst");
         this.val = val;
+        this.__type__ = "Bool";
     }
 
     @Override
@@ -605,6 +773,7 @@ class StringAST extends AST {
     public StringAST(String val) {
         super("stringconst");
         this.val = val;
+        this.__type__ = "String";
     }
 
     @Override
@@ -613,4 +782,11 @@ class StringAST extends AST {
     }
 
     public String val;
+}
+class VoidAST extends AST {
+    public static VoidAST value = new VoidAST();
+    private VoidAST() {
+        super("voidconst");
+        this.__type__ = "Void";
+    }
 }

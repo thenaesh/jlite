@@ -2,9 +2,10 @@ class Main {
     Void main(Int x, Int y, Int z) {
         Int x;
         Box b;
+        b = new Box();
         b.x = "abc";
         b.y = -(3 + b.x);
-        b.z = 5;
+        b.z = !5;
         println(b.x);
         readln(x);
     }
@@ -15,7 +16,7 @@ class Box {
     Int y;
     Int z;
     Int vol() {
-        return x * y * z;
+        return this.x * this.y * this.z;
     }
 }
 
@@ -23,6 +24,6 @@ class Square {
     Int x;
     Int y;
     Int area(String foo, Float bar) {
-        return x * y;
+        return this.x * this.y;
     }
 }
