@@ -1,12 +1,15 @@
 import java.util.ArrayList;
+import java.util.HashSet;
 
 class ProgramAST extends AST {
-    ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) {
+    ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) throws DistinctNamesCheckingException {
         super("__program__");
         this.addOperand("mainclass", mainclass);
         this.addOperand("classes", classes);
         this.mainClass = mainclass;
         this.classes = classes.convertToArrayList();
+
+        this.distinctNamesCheck();
     }
 
     @Override
@@ -33,6 +36,25 @@ class ProgramAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public void distinctNamesCheck() throws DistinctNamesCheckingException {
+        // check for distinct class names
+        HashSet<String> classnames = new HashSet<>();
+        for (ClassAST cls : this.classes) {
+            if (cls.name.equals("Main")) {
+                throw new DistinctNamesCheckingException("Only one Main class allowed!");
+            }
+            if (classnames.contains(cls.name)) {
+                throw new DistinctNamesCheckingException("Duplicate class declaration for " + cls.name + " found!");
+            }
+            classnames.add(cls.name);
+        }
+
+        // recursively check the classes themselves
+        this.mainClass.distinctNamesCheck();
+        for (ClassAST cls : this.classes) cls.distinctNamesCheck();
     }
 
     public ClassAST mainClass;
@@ -84,6 +106,30 @@ class ClassAST extends AST {
         return sb.toString();
     }
 
+    @Override
+    public void distinctNamesCheck() throws DistinctNamesCheckingException {
+        // check for duplicate members
+        HashSet<String> membernames = new HashSet<>();
+        for (VarDeclAST var : this.members) {
+            if (membernames.contains(var.name)) {
+                throw new DistinctNamesCheckingException("Duplicate member declaration for " + var.name + " found in class " + this.name + "!");
+            }
+            membernames.add(var.name);
+        }
+
+        // check for duplicate methods
+        HashSet<String> methodnames = new HashSet<>();
+        for (FuncDeclAST func : this.methods) {
+            if (methodnames.contains(func.name)) {
+                throw new DistinctNamesCheckingException("Duplicate method declaration for " + func.name + " found in class " + this.name + "!");
+            }
+            methodnames.add(func.name);
+        }
+
+        // recursively check the methods themselves
+        for (FuncDeclAST func : this.methods) func.distinctNamesCheck();
+    }
+
     public String name;
     public ArrayList<VarDeclAST> members;
     public ArrayList<FuncDeclAST> methods;
@@ -132,6 +178,17 @@ class FuncDeclAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public void distinctNamesCheck() throws DistinctNamesCheckingException {
+        HashSet<String> paramnames = new HashSet<>();
+        for (VarDeclAST param : this.params) {
+            if (paramnames.contains(param.name)) {
+                throw new DistinctNamesCheckingException("Duplicate parameter declaration for " + param.name + " found in parameter list for " + this.name + "!");
+            }
+            paramnames.add(param.name);
+        }
     }
 
     public String name;
@@ -189,7 +246,12 @@ class VarDeclAST extends AST {
         super("vardecl");
         this.addOperand("type", "\"" + type + "\"");
         this.addOperand("name", "\"" + name + "\"");
+        this.type = type;
+        this.name = name;
     }
+
+    public String type;
+    public String name;
 }
 
 class StmtAST extends AST {

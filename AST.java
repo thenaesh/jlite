@@ -30,4 +30,13 @@ class AST {
         sb.append("}");
         return sb.toString();
     }
+
+    public void distinctNamesCheck() throws DistinctNamesCheckingException {
+    }
+}
+
+class DistinctNamesCheckingException extends Exception {
+    DistinctNamesCheckingException(String err) {
+        super(err);
+    }
 }

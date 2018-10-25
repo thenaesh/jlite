@@ -33,6 +33,11 @@ class ListAST<T> extends AST {
         return this.addToArrayList(new ArrayList<T>());
     }
 
+    @Override
+    public void distinctNamesCheck() throws DistinctNamesCheckingException {
+        throw new DistinctNamesCheckingException("Should not be running distinct name checker on ListAST node, which should not exist in the AST in the first place!");
+    }
+
     public final boolean isEmpty;
     private T item;
     private ListAST<T> rest;
