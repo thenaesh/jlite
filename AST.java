@@ -103,6 +103,9 @@ class ProgramAST extends AST {
         this.classes = classes.convertToArrayList();
 
         this.distinctNamesCheck();
+
+        ClassDescriptors classDescriptors = buildClassDescriptors();
+        classDescriptors.debugPrint();
     }
 
     @Override
@@ -148,6 +151,30 @@ class ProgramAST extends AST {
         // recursively check the classes themselves
         this.mainClass.distinctNamesCheck();
         for (ClassAST cls : this.classes) cls.distinctNamesCheck();
+    }
+
+    private ClassDescriptors buildClassDescriptors() {
+        ClassDescriptors classDescriptors = new ClassDescriptors();
+
+        for (ClassAST cls : this.classes) {
+            ClassDescriptor clsDesc = new ClassDescriptor(cls.name);
+
+            for (VarDeclAST field : cls.members) {
+                clsDesc.addField(field.name, field.type);
+            }
+
+            for (FuncDeclAST method : cls.methods) {
+                MethodDescriptor mdDesc = new MethodDescriptor(method.returntype, method.name);
+                for (VarDeclAST param : method.params) {
+                    mdDesc.addParam(param.name, param.type);
+                }
+                clsDesc.addMethod(method.name, mdDesc);
+            }
+
+            classDescriptors.add(cls.name, clsDesc);
+        }
+
+        return classDescriptors;
     }
 
     public ClassAST mainClass;

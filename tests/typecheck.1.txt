@@ -18,3 +18,11 @@ class Box {
         return x * y * z;
     }
 }
+
+class Square {
+    Int x;
+    Int y;
+    Int area(String foo, Float bar) {
+        return x * y;
+    }
+}
