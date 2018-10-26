@@ -12,6 +12,11 @@ class Main {
         b.x = 10 + 11;
         b.y = -(3 - b.z);
         b.z = 135;
+        if (b.z == 7) {
+            b.z = 0;
+        } else {
+            b.z = 7;
+        }
         while (w >= 0) {
             println("abc");
             readln(str);

@@ -83,6 +83,29 @@ class FunctionEndIR3 extends IR3 {
     }
 }
 
+class FunctionCallIR3 extends IR3 {
+    public MethodDescriptor md;
+    public String obj;
+    public ArrayList<String> args;
+
+    public FunctionCallIR3(MethodDescriptor md, String obj, ArrayList<String> args) {
+        this.lvalue = IR3.mkVar();
+        this.md = md;
+        this.obj = obj;
+        this.args = args;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(lvalue + " = " + md.name + "(" + obj + ",");
+        for (String arg : args) sb.append(arg + ",");
+        sb.deleteCharAt(sb.length() - 1);
+        sb.append(");\n");
+        return sb.toString();
+    }
+}
+
 class VarDeclIR3 extends IR3 {
     public String name;
     public String type;
@@ -115,6 +138,23 @@ class ConstructionIR3 extends IR3 {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(lvalue + " = new " + cls + "();\n");
+        return sb.toString();
+    }
+}
+
+class ReturnIR3 extends IR3 {
+    public String retval;
+
+    public ReturnIR3(String retval) {
+        this.retval = retval;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Return");
+        if (retval != null) sb.append(" " + retval);
+        sb.append(";\n");
         return sb.toString();
     }
 }

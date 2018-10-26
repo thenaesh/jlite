@@ -207,7 +207,7 @@ class ProgramAST extends AST {
             }
 
             for (FuncDeclAST method : cls.methods) {
-                MethodDescriptor mdDesc = new MethodDescriptor(method.returntype, method.name);
+                MethodDescriptor mdDesc = new MethodDescriptor(method.returntype, method.name, cls.name);
                 for (VarDeclAST param : method.params) {
                     mdDesc.addParam(param.name, param.type);
                 }
@@ -577,6 +577,15 @@ class ReturnStmtAST extends StmtAST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<IR3> retvalirs = retval.genIR();
+        irs.addAll(retvalirs);
+        irs.add(new ReturnIR3(IR3.extractLvalue(retvalirs)));
+        return irs;
+    }
+
     public AST retval;
 }
 
@@ -877,6 +886,13 @@ class ThisPtrAST extends AST {
     }
 
     @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new AssignmentIR3(IR3.mkVar(), "this"));
+        return irs;
+    }
+
+    @Override
     public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) {
         this.__type__ = lenv.currentClass;
         return lenv;
@@ -989,6 +1005,25 @@ class FuncCallAST extends AST {
         }
         this.__type__ = md.returntype;
         return lenv;
+    }
+
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+
+        ArrayList<IR3> funcirs = ((MemberAccessAST)func).obj.genIR();
+        irs.addAll(funcirs);
+
+        ArrayList<String> argVarNames = new ArrayList<>();
+        for (AST arg : args) {
+            ArrayList<IR3> argirs = arg.genIR();
+            String argVarName = IR3.extractLvalue(argirs);
+            irs.addAll(argirs);
+            argVarNames.add(argVarName);
+        }
+
+        irs.add(new FunctionCallIR3(func.__methoddesc__, IR3.extractLvalue(funcirs), argVarNames));
+        return irs;
     }
 
     public AST func;

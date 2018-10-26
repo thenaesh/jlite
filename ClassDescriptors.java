@@ -110,11 +110,13 @@ class ClassDescriptor {
 }
 
 class MethodDescriptor {
+    public String classname;
     public String returntype;
     public String name;
     public ArrayList<AbstractMap.SimpleEntry<String, String>> params = new ArrayList<>(); // [(name, type)]
 
-    public MethodDescriptor(String returntype, String name) {
+    public MethodDescriptor(String returntype, String name, String classname) {
+        this.classname = classname;
         this.returntype = returntype;
         this.name = name;
     }
