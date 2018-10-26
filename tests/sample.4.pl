@@ -3,8 +3,8 @@ class Halt {
     while (true) {
       while (condition) {
       }
-      return true;
+      return;
     }
-    return false;
+    return;
   }
 }

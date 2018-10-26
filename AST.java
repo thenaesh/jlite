@@ -580,8 +580,9 @@ class ReturnStmtAST extends StmtAST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
-        if (retval.__type__.equals("Void")) {
+        if (retval == null || retval.__type__.equals("Void")) {
             irs.add(new ReturnIR3());
+            return irs;
         }
         ArrayList<IR3> retvalirs = retval.genIR();
         irs.addAll(retvalirs);

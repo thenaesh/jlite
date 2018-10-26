@@ -7,6 +7,6 @@ class Halt {
       return true;
     }
     */
-    return false;
+    return;
   }
 }
