@@ -3,3 +3,9 @@ class DistinctNamesCheckingException extends Exception {
         super(err);
     }
 }
+
+class TypeCheckingException extends Exception {
+    TypeCheckingException(String err) {
+        super(err);
+    }
+}

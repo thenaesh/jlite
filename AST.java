@@ -1,6 +1,8 @@
 import java.util.Arrays;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.HashMap;
 
 ////////////////////////////////////////
@@ -10,11 +12,13 @@ import java.util.HashMap;
 abstract class AST {
     public String kind;
     public String __type__;
+    public MethodDescriptor __methoddesc__;
     public HashMap<String, Object> operands = new HashMap<>();
 
     public AST(String kind) {
         this.kind = kind;
-        this.__type__ = "NONE";
+        this.__type__ = "Void";
+        this.__methoddesc__ = null;
     }
 
     public void addOperand(String name, Object value) {
@@ -40,6 +44,10 @@ abstract class AST {
     }
 
     public void distinctNamesCheck() throws DistinctNamesCheckingException {
+    }
+
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        return lenv;
     }
 }
 
@@ -87,6 +95,11 @@ class ListAST<T> extends AST {
         throw new DistinctNamesCheckingException("Should not be running distinct name checker on ListAST node, which should not exist in the AST in the first place!");
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        throw new TypeCheckingException("Should not be runnign type checker on ListAST node, which should not exist in the AST in the first place!");
+    }
+
     public final boolean isEmpty;
     private T item;
     private ListAST<T> rest;
@@ -97,7 +110,7 @@ class ListAST<T> extends AST {
 ////////////////////////////////
 
 class ProgramAST extends AST {
-    ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) throws DistinctNamesCheckingException {
+    ProgramAST(ClassAST mainclass, ListAST<ClassAST> classes) throws DistinctNamesCheckingException, TypeCheckingException {
         super("__program__");
         this.mainClass = mainclass;
         this.classes = classes.convertToArrayList();
@@ -106,6 +119,9 @@ class ProgramAST extends AST {
 
         ClassDescriptors classDescriptors = buildClassDescriptors();
         classDescriptors.debugPrint();
+        LocalEnvironment localEnvironment = new LocalEnvironment();
+
+        this.typeCheck(classDescriptors, localEnvironment);
     }
 
     @Override
@@ -151,6 +167,13 @@ class ProgramAST extends AST {
         // recursively check the classes themselves
         this.mainClass.distinctNamesCheck();
         for (ClassAST cls : this.classes) cls.distinctNamesCheck();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        this.mainClass.typeCheck(cdesc, lenv);
+        for (ClassAST cls : this.classes) cls.typeCheck(cdesc, lenv);
+        return lenv;
     }
 
     private ClassDescriptors buildClassDescriptors() {
@@ -247,6 +270,14 @@ class ClassAST extends AST {
         for (FuncDeclAST func : this.methods) func.distinctNamesCheck();
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        LocalEnvironment lenvNew = new LocalEnvironment(lenv);
+        lenvNew.currentClass = this.name;
+        for (FuncDeclAST method : this.methods) method.typeCheck(cdesc, lenvNew);
+        return lenv;
+    }
+
     public String name;
     public ArrayList<VarDeclAST> members;
     public ArrayList<FuncDeclAST> methods;
@@ -304,6 +335,16 @@ class FuncDeclAST extends AST {
         }
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        LocalEnvironment lenvNew = new LocalEnvironment(lenv);
+        for (VarDeclAST param : this.params) lenvNew.extend(param.name, param.type);
+        lenvNew.retType = returntype;
+        lenvNew.methodName = name;
+        this.body.typeCheck(cdesc, lenvNew);
+        return lenv;
+    }
+
     public String name;
     public String returntype;
     public ArrayList<VarDeclAST> params;
@@ -346,6 +387,20 @@ class BlockAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        LocalEnvironment lenvNew = new LocalEnvironment(lenv);
+
+        for (VarDeclAST var : this.vardecls) lenvNew.extend(var.name, var.type);
+        for (StmtAST stmt : this.stmts) {
+            stmt.typeCheck(cdesc, lenvNew);
+            if (stmt.kind.equals("returnstmt") && !stmt.__type__.equals(lenvNew.retType)) {
+                throw new TypeCheckingException("Expected return type of " + lenvNew.retType + " in method " + lenvNew.currentClass + "." + lenvNew.methodName + " but encountered " + stmt.__type__);
+            }
+        }
+        return lenvNew;
     }
 
     public ArrayList<VarDeclAST> vardecls;
@@ -412,6 +467,16 @@ class AssignStmtAST extends StmtAST {
         return sb.toString();
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        assignee.typeCheck(cdesc, lenv);
+        val.typeCheck(cdesc, lenv);
+        if (!assignee.__type__.equals(val.__type__)) {
+            throw new TypeCheckingException("Assigning value of type " + val.__type__ + " to variable of type " + assignee.__type__);
+        }
+        return lenv;
+    }
+
     public AST assignee;
     public AST val;
 }
@@ -438,6 +503,13 @@ class ReturnStmtAST extends StmtAST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        retval.typeCheck(cdesc, lenv);
+        this.__type__ = retval.__type__;
+        return lenv;
     }
 
     public AST retval;
@@ -472,6 +544,15 @@ class IfStmtAST extends StmtAST {
         return sb.toString();
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        condition.typeCheck(cdesc, lenv);
+        if (!condition.__type__.equals("Bool")) throw new TypeCheckingException("If stmt condition must be Bool, but encountered " + condition.__type__);
+        successblock.typeCheck(cdesc, lenv);
+        failureblock.typeCheck(cdesc, lenv);
+        return lenv;
+    }
+
     public AST condition;
     public BlockAST successblock;
     public BlockAST failureblock;
@@ -502,6 +583,14 @@ class WhileStmtAST extends StmtAST {
         return sb.toString();
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        condition.typeCheck(cdesc, lenv);
+        if (!condition.__type__.equals("Bool")) throw new TypeCheckingException("While loop condition must be Bool, but encountered " + condition.__type__);
+        block.typeCheck(cdesc, lenv);
+        return lenv;
+    }
+
     public AST condition;
     public BlockAST block;
 }
@@ -525,6 +614,15 @@ class PrintlnAST extends StmtAST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        output.typeCheck(cdesc, lenv);
+        if (!output.__type__.equals("String")) {
+            throw new TypeCheckingException("Can only print a String, not " + output.__type__);
+        }
+        return lenv;
     }
 
     public AST output;
@@ -551,6 +649,15 @@ class ReadlnAST extends StmtAST {
         return sb.toString();
     }
 
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        input.typeCheck(cdesc, lenv);
+        if (!input.__type__.equals("String")) {
+            throw new TypeCheckingException("Can only read into a String, not " + input.__type__);
+        }
+        return lenv;
+    }
+
     public RefAST input;
 }
 
@@ -567,6 +674,7 @@ class UnOpAST extends AST {
         sb.append("{");
 
         // print kind
+        sb.append("\"__type__\":\"" + this.__type__ + "\",");
         sb.append("\"kind\":\"" + this.kind + "\",");
 
         sb.append("\"name\":\"" + this.name + "\",");
@@ -574,6 +682,20 @@ class UnOpAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        operand.typeCheck(cdesc, lenv);
+        if (name.equals("!") && !operand.__type__.equals("Bool")) {
+            throw new TypeCheckingException("Unary operator ! can only be used with Bool, not " + operand.__type__);
+        }
+        if (name.equals("-") && !operand.__type__.equals("Int")) {
+            throw new TypeCheckingException("Unary operator - can only be used with Int, not " + operand.__type__);
+        }
+        if (name.equals("!")) this.__type__ = "Bool";
+        if (name.equals("-")) this.__type__ = "Int";
+        return lenv;
     }
 
     public String name;
@@ -594,6 +716,7 @@ class BinOpAST extends AST {
         sb.append("{");
 
         // print kind
+        sb.append("\"__type__\":\"" + this.__type__ + "\",");
         sb.append("\"kind\":\"" + this.kind + "\",");
 
         sb.append("\"name\":\"" + this.name + "\",");
@@ -602,6 +725,26 @@ class BinOpAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        boolean isIntExp = name.equals("+") || name.equals("-") || name.equals("*") || name.equals("/");
+        boolean isIntCmp = name.equals("<") || name.equals(">") || name.equals("<=") || name.equals(">=") || name.equals("==") || name.equals("!=");
+        left.typeCheck(cdesc, lenv);
+        right.typeCheck(cdesc, lenv);
+        if (isIntExp || isIntCmp) {
+            if (!left.__type__.equals("Int") || !right.__type__.equals("Int")) {
+                throw new TypeCheckingException("Binary operation " + name + " can only be used on Ints");
+            }
+            this.__type__ = isIntCmp ? "Bool" : "Int";
+        } else {
+            if (!left.__type__.equals("Bool") || !right.__type__.equals("Bool")) {
+                throw new TypeCheckingException("Binary operation " + name + " can only be used on Bools");
+            }
+            this.__type__ = "Bool";
+        }
+        return lenv;
     }
 
     public String name;
@@ -640,11 +783,18 @@ class ThisPtrAST extends AST {
         sb.append("{");
 
         // print kind
+        sb.append("\"__type__\":\"" + this.__type__ + "\",");
         sb.append("\"kind\":\"" + this.kind + "\"");
 
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) {
+        this.__type__ = lenv.currentClass;
+        return lenv;
     }
 }
 
@@ -652,6 +802,12 @@ class ConstructionAST extends AST {
     ConstructionAST(String classname) {
         super("construction");
         this.classname = classname;
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) {
+        this.__type__ = classname;
+        return lenv;
     }
 
     public String classname;
@@ -669,12 +825,20 @@ class RefAST extends AST {
         sb.append("{");
 
         // print kind
+        sb.append("\"__type__\":\"" + this.__type__ + "\",");
         sb.append("\"kind\":\"" + this.kind + "\",");
 
         sb.append("\"id\":\"" + this.id + "\"");
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        if (!lenv.contains(id)) throw new TypeCheckingException(id + " not found");
+        this.__type__ = lenv.getType(id);
+        return lenv;
     }
 
     public String id;
@@ -693,6 +857,7 @@ class FuncCallAST extends AST {
         sb.append("{");
 
         // print kind
+        sb.append("\"__type__\":\"" + this.__type__ + "\",");
         sb.append("\"kind\":\"" + this.kind + "\",");
 
         // print func
@@ -709,6 +874,22 @@ class FuncCallAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        func.typeCheck(cdesc, lenv);
+        if (!func.__type__.equals("FUNCTION")) throw new TypeCheckingException("Can only call a function!");
+        MethodDescriptor md = func.__methoddesc__;
+        if (args.size() != md.params.size()) throw new TypeCheckingException("Wrong number of arguments in function " + md.name);
+        for (int i=0; i<md.params.size(); i++) {
+            AST arg = args.get(i);
+            SimpleEntry<String, String> param = md.params.get(i);
+            arg.typeCheck(cdesc, lenv);
+            if (!arg.__type__.equals(param.getValue())) throw new TypeCheckingException("Parameter type mismatch for parameter " + param.getKey() + " in function " + md.name);
+        }
+        this.__type__ = md.returntype;
+        return lenv;
     }
 
     public AST func;
@@ -728,6 +909,7 @@ class MemberAccessAST extends AST {
         sb.append("{");
 
         // print kind
+        sb.append("\"__type__\":\"" + this.__type__ + "\",");
         sb.append("\"kind\":\"" + this.kind + "\",");
 
         sb.append("\"obj\":" + this.obj.toString() + ",");
@@ -735,6 +917,20 @@ class MemberAccessAST extends AST {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
+        obj.typeCheck(cdesc, lenv);
+        if (cdesc.isPrimitive(obj.__type__)) throw new TypeCheckingException("Cannot perform member access on primitive value!");
+        ClassDescriptor cd = cdesc.getClassDescriptor(obj.__type__);
+        if (cd.hasField(field)) {
+            this.__type__ = cd.getFieldType(field);
+        } else if (cd.hasMethod(field)) {
+            this.__type__ = "FUNCTION";
+            this.__methoddesc__ = cd.getMethodDescriptor(field);
+        } else throw new TypeCheckingException("No such member!");
+        return lenv;
     }
 
     public AST obj;

@@ -19,8 +19,16 @@ class ClassDescriptors {
         return primitiveTypes.contains(type) || classes.containsKey(type);
     }
 
+    public boolean isPrimitive(String type) {
+        return primitiveTypes.contains(type);
+    }
+
     public void add(String type, ClassDescriptor classDescriptor) {
         classes.put(type, classDescriptor);
+    }
+
+    public ClassDescriptor getClassDescriptor(String type) {
+        return classes.get(type);
     }
 
     public void debugPrint() {
@@ -48,6 +56,20 @@ class ClassDescriptor {
 
     public void addMethod(String name, MethodDescriptor md) {
         methods.put(name, md);
+    }
+
+    public boolean hasField(String name) {
+        return fields.containsKey(name);
+    }
+    public String getFieldType(String name) {
+        return fields.get(name);
+    }
+
+    public boolean hasMethod(String name) {
+        return methods.containsKey(name);
+    }
+    public MethodDescriptor getMethodDescriptor(String name) {
+        return methods.get(name);
     }
 
     public void debugPrint() {

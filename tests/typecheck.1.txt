@@ -1,13 +1,23 @@
 class Main {
     Void main(Int x, Int y, Int z) {
-        Int x;
+        Int w;
         Box b;
+        String str;
         b = new Box();
-        b.x = "abc";
-        b.y = -(3 + b.x);
-        b.z = !5;
-        println(b.x);
-        readln(x);
+        b.x = 10;
+        b.y = -(3 - b.z);
+        b.z = 135;
+        w = b.mass(100);
+        while (w >= 0) {
+            println("abc");
+            readln(str);
+            if (w > 1024) {
+                return;
+                w = w / 2;
+            } else {
+                w = w - 1;
+            }
+        }
     }
 }
 
@@ -15,14 +25,25 @@ class Box {
     Int x;
     Int y;
     Int z;
+    Box b;
     Int vol() {
-        return this.x * this.y * this.z;
+        if (this.x < 0) {
+            this.b.x = -this.x;
+            return this.b.vol();
+        } else {
+            return this.x * this.y * this.z;
+        }
+    }
+    Int mass(Int density) {
+        return this.vol() * density;
     }
 }
 
 class Square {
     Int x;
     Int y;
+    Bool z;
+    Bool w;
     Int area(String foo, Float bar) {
         return this.x * this.y;
     }
