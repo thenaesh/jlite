@@ -580,6 +580,9 @@ class ReturnStmtAST extends StmtAST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
+        if (retval.__type__.equals("Void")) {
+            irs.add(new ReturnIR3());
+        }
         ArrayList<IR3> retvalirs = retval.genIR();
         irs.addAll(retvalirs);
         irs.add(new ReturnIR3(IR3.extractLvalue(retvalirs)));
@@ -627,6 +630,30 @@ class IfStmtAST extends StmtAST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+
+        ArrayList<IR3> conditionirs = condition.genIR();
+        ArrayList<IR3> successirs = successblock.genIR();
+        ArrayList<IR3> failureirs = failureblock.genIR();
+
+        LabelIR3 successlabelir = new LabelIR3();
+        LabelIR3 endlabelir = new LabelIR3();
+        GotoIR3 successgotoir = new GotoIR3(successlabelir.label, IR3.extractLvalue(conditionirs));
+        GotoIR3 endgotoir = new GotoIR3(endlabelir.label);
+
+        irs.addAll(conditionirs);
+        irs.add(successgotoir);
+        irs.addAll(failureirs);
+        irs.add(endgotoir);
+        irs.add(successlabelir);
+        irs.addAll(successirs);
+        irs.add(endlabelir);
+
+        return irs;
+    }
+
     public AST condition;
     public BlockAST successblock;
     public BlockAST failureblock;
@@ -665,6 +692,31 @@ class WhileStmtAST extends StmtAST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+
+        ArrayList<IR3> conditionirs = condition.genIR();
+        ArrayList<IR3> blockirs = block.genIR();
+
+        LabelIR3 startlabelir = new LabelIR3();
+        LabelIR3 successlabelir = new LabelIR3();
+        LabelIR3 endlabelir = new LabelIR3();
+        GotoIR3 successgotoir = new GotoIR3(successlabelir.label, IR3.extractLvalue(conditionirs));
+        GotoIR3 endgotoir = new GotoIR3(endlabelir.label);
+        GotoIR3 startgotoir = new GotoIR3(startlabelir.label);
+
+        irs.add(startlabelir);
+        irs.addAll(conditionirs);
+        irs.add(successgotoir);
+        irs.add(endgotoir);
+        irs.add(successlabelir);
+        irs.addAll(blockirs);
+        irs.add(startgotoir);
+        irs.add(endlabelir);
+
+        return irs;
+    }
     public AST condition;
     public BlockAST block;
 }
@@ -699,6 +751,16 @@ class PrintlnAST extends StmtAST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<IR3> outputir = output.genIR();
+        PrintIR3 printir = new PrintIR3(IR3.extractLvalue(outputir));
+        irs.addAll(outputir);
+        irs.add(printir);
+        return irs;
+    }
+
     public AST output;
 }
 
@@ -730,6 +792,13 @@ class ReadlnAST extends StmtAST {
             throw new TypeCheckingException("Can only read into a String, not " + input.__type__);
         }
         return lenv;
+    }
+
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new ReadIR3(input.id));
+        return irs;
     }
 
     public RefAST input;

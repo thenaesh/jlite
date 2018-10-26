@@ -6,8 +6,8 @@ class IR3 {
     public static Integer labelCount = 0;
     public static Integer variableCount = 0;
 
-    public static String mkLabel() {
-        return "__LABEL" + IR3.labelCount++;
+    public static Integer mkLabel() {
+        return IR3.labelCount++;
     }
     public static String mkVar() {
         return "__v" + IR3.variableCount++;
@@ -27,6 +27,40 @@ class PlaceholderIR3 extends IR3 {
     @Override
     public String toString() {
         return "PLACEHOLDER\n";
+    }
+}
+
+class LabelIR3 extends IR3 {
+    public Integer label;
+
+    public LabelIR3() {
+        this.label = IR3.mkLabel();
+    }
+
+    @Override
+    public String toString() {
+        return "LABEL_" + label + ":\n";
+    }
+}
+
+class GotoIR3 extends IR3 {
+    Integer label;
+    String condition;
+
+    public GotoIR3(Integer label, String condition) {
+        this.condition = condition;
+        this.label = label;
+    }
+    public GotoIR3(Integer label) {
+        this(label, null);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (condition != null) sb.append("If(" + condition + ") ");
+        sb.append("Goto " + label + ";\n");
+        return sb.toString();
     }
 }
 
@@ -106,6 +140,32 @@ class FunctionCallIR3 extends IR3 {
     }
 }
 
+class PrintIR3 extends IR3 {
+    String output;
+
+    PrintIR3(String output) {
+        this.output = output;
+    }
+
+    @Override
+    public String toString() {
+        return "println(" + output + ");\n";
+    }
+}
+
+class ReadIR3 extends IR3 {
+    String input;
+
+    ReadIR3(String input) {
+        this.input = input;
+    }
+
+    @Override
+    public String toString() {
+        return "readln(" + input + ");\n";
+    }
+}
+
 class VarDeclIR3 extends IR3 {
     public String name;
     public String type;
@@ -147,6 +207,9 @@ class ReturnIR3 extends IR3 {
 
     public ReturnIR3(String retval) {
         this.retval = retval;
+    }
+    public ReturnIR3() {
+        this(null);
     }
 
     @Override
