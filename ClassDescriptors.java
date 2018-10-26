@@ -39,6 +39,17 @@ class ClassDescriptors {
         }
         System.out.println("END ClassDescriptors Debug Print");
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, ClassDescriptor> entry : classes.entrySet()) {
+            sb.append("class " + entry.getKey() + " {\n");
+            sb.append(entry.getValue().toString());
+            sb.append("}\n");
+        }
+        return sb.toString();
+    }
 }
 
 class ClassDescriptor {
@@ -85,6 +96,16 @@ class ClassDescriptor {
             entry.getValue().debugPrint();
         }
         System.out.println("END Class " + name + " Methods Debug Print");
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : fields.entrySet()) {
+            sb.append("    " + entry.getKey() + " : ");
+            sb.append(entry.getValue() + "\n");
+        }
+        return sb.toString();
     }
 }
 

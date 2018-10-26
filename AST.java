@@ -49,6 +49,10 @@ abstract class AST {
     public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
         return lenv;
     }
+
+    public ArrayList<IR3> genIR() {
+        return new ArrayList<>();
+    }
 }
 
 /**
@@ -118,10 +122,13 @@ class ProgramAST extends AST {
         this.distinctNamesCheck();
 
         ClassDescriptors classDescriptors = buildClassDescriptors();
-        classDescriptors.debugPrint();
         LocalEnvironment localEnvironment = new LocalEnvironment();
-
         this.typeCheck(classDescriptors, localEnvironment);
+
+        ArrayList<IR3> irs = this.genIR();
+        System.out.println("===== IR3 BEGIN =====\n");
+        for (IR3 ir : irs) System.out.println(ir.toString());
+        System.out.println("===== IR3 END =====");
     }
 
     @Override
@@ -176,10 +183,23 @@ class ProgramAST extends AST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new ClassDataIR3(this.buildClassDescriptors()));
+        irs.addAll(this.mainClass.genIR());
+        for (ClassAST cls : this.classes) irs.addAll(cls.genIR());
+        return irs;
+    }
+
     private ClassDescriptors buildClassDescriptors() {
         ClassDescriptors classDescriptors = new ClassDescriptors();
 
-        for (ClassAST cls : this.classes) {
+        ArrayList<ClassAST> classesToCheck = new ArrayList<>();
+        classesToCheck.add(this.mainClass);
+        classesToCheck.addAll(this.classes);
+
+        for (ClassAST cls : classesToCheck) {
             ClassDescriptor clsDesc = new ClassDescriptor(cls.name);
 
             for (VarDeclAST field : cls.members) {
@@ -276,6 +296,22 @@ class ClassAST extends AST {
         lenvNew.currentClass = this.name;
         for (FuncDeclAST method : this.methods) method.typeCheck(cdesc, lenvNew);
         return lenv;
+    }
+
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        for (FuncDeclAST method : this.methods) {
+            FunctionStartIR3 funcStart = new FunctionStartIR3(this.name, method.returntype, method.name);
+            FunctionEndIR3 funcEnd = new FunctionEndIR3();
+            for (VarDeclAST param : method.params) {
+                funcStart.addParam(param.name, param.type);
+            }
+            irs.add(funcStart);
+            irs.addAll(method.body.genIR());
+            irs.add(funcEnd);
+        }
+        return irs;
     }
 
     public String name;
@@ -403,6 +439,19 @@ class BlockAST extends AST {
         return lenvNew;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        for (VarDeclAST var : this.vardecls) {
+            VarDeclIR3 varir3 = new VarDeclIR3(var.name, var.type);
+            irs.add(varir3);
+        }
+        for (StmtAST stmt : this.stmts) {
+            irs.addAll(stmt.genIR());
+        }
+        return irs;
+    }
+
     public ArrayList<VarDeclAST> vardecls;
     public ArrayList<StmtAST> stmts;
 }
@@ -475,6 +524,22 @@ class AssignStmtAST extends StmtAST {
             throw new TypeCheckingException("Assigning value of type " + val.__type__ + " to variable of type " + assignee.__type__);
         }
         return lenv;
+    }
+
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<IR3> valirs = val.genIR();
+        irs.addAll(valirs);
+        if (assignee.kind.equals("reference")) {
+            // doesn't make sense to store raw id in tmp variable
+            irs.add(new AssignmentIR3(((RefAST)assignee).id, IR3.extractLvalue(valirs)));
+            return irs;
+        }
+        ArrayList<IR3> assigneeirs = assignee.genIR();
+        irs.addAll(assigneeirs);
+        irs.add(new AssignmentIR3(IR3.extractLvalue(assigneeirs), IR3.extractLvalue(valirs)));
+        return irs;
     }
 
     public AST assignee;
@@ -698,6 +763,15 @@ class UnOpAST extends AST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<IR3> operandirs = operand.genIR();
+        irs.addAll(operandirs);
+        irs.add(new UnOpIR3(name, IR3.extractLvalue(operandirs)));
+        return irs;
+    }
+
     public String name;
     public AST operand;
 }
@@ -745,6 +819,17 @@ class BinOpAST extends AST {
             this.__type__ = "Bool";
         }
         return lenv;
+    }
+
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<IR3> leftirs = left.genIR();
+        ArrayList<IR3> rightirs = right.genIR();
+        irs.addAll(leftirs);
+        irs.addAll(rightirs);
+        irs.add(new BinOpIR3(name, IR3.extractLvalue(leftirs), IR3.extractLvalue(rightirs)));
+        return irs;
     }
 
     public String name;
@@ -810,6 +895,13 @@ class ConstructionAST extends AST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new ConstructionIR3(classname));
+        return irs;
+    }
+
     public String classname;
 }
 
@@ -839,6 +931,13 @@ class RefAST extends AST {
         if (!lenv.contains(id)) throw new TypeCheckingException(id + " not found");
         this.__type__ = lenv.getType(id);
         return lenv;
+    }
+
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new AssignmentIR3(IR3.mkVar(), id));
+        return irs;
     }
 
     public String id;
@@ -933,13 +1032,22 @@ class MemberAccessAST extends AST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<IR3> objirs = obj.genIR();
+        irs.addAll(objirs);
+        irs.add(new MemberAccessIR3(IR3.extractLvalue(objirs), field));
+        return irs;
+    }
+
     public AST obj;
     public String field;
 }
 
 class IntAST extends AST {
     public IntAST(Integer val) {
-        super("intconst");
+        super("const");
         this.val = val;
         this.__type__ = "Int";
     }
@@ -949,11 +1057,18 @@ class IntAST extends AST {
         return "" + val;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new IntIR3(val));
+        return irs;
+    }
+
     public Integer val;
 }
 class BoolAST extends AST {
     public BoolAST(Boolean val) {
-        super("boolconst");
+        super("const");
         this.val = val;
         this.__type__ = "Bool";
     }
@@ -963,11 +1078,18 @@ class BoolAST extends AST {
         return "" + val;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new BoolIR3(val));
+        return irs;
+    }
+
     public Boolean val;
 }
 class StringAST extends AST {
     public StringAST(String val) {
-        super("stringconst");
+        super("const");
         this.val = val;
         this.__type__ = "String";
     }
@@ -977,12 +1099,19 @@ class StringAST extends AST {
         return "\"" + val + "\"";
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+        irs.add(new StringIR3(val));
+        return irs;
+    }
+
     public String val;
 }
 class VoidAST extends AST {
     public static VoidAST value = new VoidAST();
     private VoidAST() {
-        super("voidconst");
+        super("const");
         this.__type__ = "Void";
     }
 }

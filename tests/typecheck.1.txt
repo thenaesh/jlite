@@ -1,13 +1,17 @@
 class Main {
     Void main(Int x, Int y, Int z) {
         Int w;
+        Bool boo;
+        Int area;
         Box b;
+        Square sq;
         String str;
+        boo = !true;
         b = new Box();
-        b.x = 10;
+        sq = new Square();
+        b.x = 10 + 11;
         b.y = -(3 - b.z);
         b.z = 135;
-        w = b.mass(100);
         while (w >= 0) {
             println("abc");
             readln(str);
@@ -18,6 +22,8 @@ class Main {
                 w = w - 1;
             }
         }
+        area = sq.area();
+        w = b.mass(100);
     }
 }
 
@@ -27,6 +33,7 @@ class Box {
     Int z;
     Box b;
     Int vol() {
+        Square unnecessaryVar;
         if (this.x < 0) {
             this.b.x = -this.x;
             return this.b.vol();
@@ -44,7 +51,7 @@ class Square {
     Int y;
     Bool z;
     Bool w;
-    Int area(String foo, Float bar) {
+    Int area() {
         return this.x * this.y;
     }
 }
