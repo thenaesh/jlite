@@ -9,6 +9,7 @@ class Main {
         boo = !true;
         b = new Box();
         sq = new Square();
+        b.s.z = true;
         b.x = 10 + 11;
         b.y = -(3 - b.z);
         b.z = 135;
@@ -27,7 +28,7 @@ class Main {
                 w = w - 1;
             }
         }
-        area = sq.area();
+        area = b.scale(b.s.area()).s.area();
         w = b.mass(100);
     }
 }
@@ -36,18 +37,28 @@ class Box {
     Int x;
     Int y;
     Int z;
-    Box b;
+    Square s;
     Int vol() {
-        Square unnecessaryVar;
         if (this.x < 0) {
-            this.b.x = -this.x;
-            return this.b.vol();
+            this.x = -this.x;
+            return this.vol();
         } else {
             return this.x * this.y * this.z;
         }
     }
     Int mass(Int density) {
         return this.vol() * density;
+    }
+    Box self() {
+        return this;
+    }
+    Box scale(Int factor) {
+        Box b;
+        b = new Box();
+        b.x = this.x * factor;
+        b.y = this.y * factor;
+        b.z = this.z * factor;
+        return b;
     }
 }
 

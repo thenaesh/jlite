@@ -126,9 +126,12 @@ class ProgramAST extends AST {
         this.typeCheck(classDescriptors, localEnvironment);
 
         ArrayList<IR3> irs = this.genIR();
+
+        SymbolTables.print();
+        ClassTables.print();
         System.out.println("===== IR3 BEGIN =====\n");
         for (IR3 ir : irs) System.out.println(ir.toString());
-        System.out.println("===== IR3 END =====");
+        System.out.println("===== IR3 END =====\n");
     }
 
     @Override
@@ -186,7 +189,6 @@ class ProgramAST extends AST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
-        irs.add(new ClassDataIR3(this.buildClassDescriptors()));
         irs.addAll(this.mainClass.genIR());
         for (ClassAST cls : this.classes) irs.addAll(cls.genIR());
         return irs;
@@ -217,6 +219,7 @@ class ProgramAST extends AST {
             classDescriptors.add(cls.name, clsDesc);
         }
 
+        ClassTables.generateFromClassDescriptors(classDescriptors);
         return classDescriptors;
     }
 
@@ -302,14 +305,8 @@ class ClassAST extends AST {
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
         for (FuncDeclAST method : this.methods) {
-            FunctionStartIR3 funcStart = new FunctionStartIR3(this.name, method.returntype, method.name);
-            FunctionEndIR3 funcEnd = new FunctionEndIR3();
-            for (VarDeclAST param : method.params) {
-                funcStart.addParam(param.name, param.type);
-            }
-            irs.add(funcStart);
-            irs.addAll(method.body.genIR());
-            irs.add(funcEnd);
+            method.classname = this.name;
+            irs.addAll(method.genIR());
         }
         return irs;
     }
@@ -360,6 +357,10 @@ class FuncDeclAST extends AST {
         return sb.toString();
     }
 
+    public String augmentedName() {
+        return this.classname + "_" + this.name;
+    }
+
     @Override
     public void distinctNamesCheck() throws DistinctNamesCheckingException {
         HashSet<String> paramnames = new HashSet<>();
@@ -381,6 +382,32 @@ class FuncDeclAST extends AST {
         return lenv;
     }
 
+    @Override
+    public ArrayList<IR3> genIR() {
+        ArrayList<IR3> irs = new ArrayList<>();
+
+        SymbolTables.create();
+        for (VarDeclAST var : this.body.vardecls) SymbolTables.currentTable.setEntry(var.name, Type.fromTypeString(var.type));
+        for (VarDeclAST param : this.params) SymbolTables.currentTable.setEntry(param.name, Type.fromTypeString(param.type));
+        SymbolTables.currentTable.setEntry("this", Type.fromTypeString(this.classname));
+        ArrayList<IR3> bodyirs = body.genIR();
+        SymbolTables.flush(augmentedName());
+
+        FunctionStartIR3 funcStart = new FunctionStartIR3(returntype, augmentedName());
+        FunctionEndIR3 funcEnd = new FunctionEndIR3();
+
+        funcStart.addParam("this", this.classname);
+        for (VarDeclAST param : params) {
+            funcStart.addParam(param.name, param.type);
+        }
+
+        irs.add(funcStart);
+        irs.addAll(bodyirs);
+        irs.add(funcEnd);
+        return irs;
+    }
+
+    public String classname; // must initialise before calling genIR
     public String name;
     public String returntype;
     public ArrayList<VarDeclAST> params;
@@ -442,17 +469,13 @@ class BlockAST extends AST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
-        for (VarDeclAST var : this.vardecls) {
-            VarDeclIR3 varir3 = new VarDeclIR3(var.name, var.type);
-            irs.add(varir3);
-        }
         for (StmtAST stmt : this.stmts) {
             irs.addAll(stmt.genIR());
         }
         return irs;
     }
 
-    public ArrayList<VarDeclAST> vardecls;
+    public ArrayList<VarDeclAST> vardecls; // should only exist in function bodies
     public ArrayList<StmtAST> stmts;
 }
 
@@ -534,6 +557,12 @@ class AssignStmtAST extends StmtAST {
         if (assignee.kind.equals("reference")) {
             // doesn't make sense to store raw id in tmp variable
             irs.add(new AssignmentIR3(((RefAST)assignee).id, IR3.extractLvalue(valirs)));
+            return irs;
+        }
+        if (assignee.kind.equals("memberaccess") && ((MemberAccessAST)assignee).obj.kind.equals("reference")) {
+            // if indexing an object directly without any additional indirection, shortcut
+            MemberAccessAST assigneeAfterCast = (MemberAccessAST)assignee;
+            irs.add(new MemberAssignmentIR3(((RefAST)assigneeAfterCast.obj).id, assigneeAfterCast.field, IR3.extractLvalue(valirs)));
             return irs;
         }
         ArrayList<IR3> assigneeirs = assignee.genIR();
@@ -958,7 +987,7 @@ class ThisPtrAST extends AST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
-        irs.add(new AssignmentIR3(IR3.mkVar(), "this"));
+        irs.add(new AssignmentIR3(IR3.mkVar(Type.fromTypeString(this.__type__)), "this"));
         return irs;
     }
 
@@ -1022,7 +1051,7 @@ class RefAST extends AST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
-        irs.add(new AssignmentIR3(IR3.mkVar(), id));
+        irs.add(new AssignmentIR3(IR3.mkVar(Type.fromTypeString(this.__type__)), id));
         return irs;
     }
 
@@ -1080,11 +1109,13 @@ class FuncCallAST extends AST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
+        ArrayList<String> argVarNames = new ArrayList<>();
 
+        // put the object name (this) into args
         ArrayList<IR3> funcirs = ((MemberAccessAST)func).obj.genIR();
         irs.addAll(funcirs);
+        argVarNames.add(IR3.extractLvalue(funcirs));
 
-        ArrayList<String> argVarNames = new ArrayList<>();
         for (AST arg : args) {
             ArrayList<IR3> argirs = arg.genIR();
             String argVarName = IR3.extractLvalue(argirs);
@@ -1092,8 +1123,16 @@ class FuncCallAST extends AST {
             argVarNames.add(argVarName);
         }
 
-        irs.add(new FunctionCallIR3(func.__methoddesc__, IR3.extractLvalue(funcirs), argVarNames));
+        irs.add(new FunctionCallIR3(augmentedName(), returnType(), argVarNames));
         return irs;
+    }
+
+    public String augmentedName() {
+        return func.__methoddesc__.classname + "_" + func.__methoddesc__.name;
+    }
+
+    public Type returnType() {
+        return Type.fromTypeString(func.__methoddesc__.returntype);
     }
 
     public AST func;
@@ -1127,7 +1166,10 @@ class MemberAccessAST extends AST {
     public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
         obj.typeCheck(cdesc, lenv);
         if (cdesc.isPrimitive(obj.__type__)) throw new TypeCheckingException("Cannot perform member access on primitive value!");
+        if (!cdesc.has(obj.__type__)) throw new TypeCheckingException("No such type: " + obj.__type__);
+
         ClassDescriptor cd = cdesc.getClassDescriptor(obj.__type__);
+        if (cd == null) throw new TypeCheckingException("No such class!");
         if (cd.hasField(field)) {
             this.__type__ = cd.getFieldType(field);
         } else if (cd.hasMethod(field)) {

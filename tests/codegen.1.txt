@@ -1,0 +1,14 @@
+class Main {
+    Void main(Int x, Int y, Int z) {
+        Int w;
+        Int x;
+        Bool b;
+        Bool c;
+        Int area;
+        String str;
+        w = 1+1;
+        x = -1;
+        b = true || false;
+        c = !b;
+    }
+}

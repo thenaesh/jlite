@@ -1,4 +1,4 @@
-all: compile run
+all: compile run clean
 
 compile:
 	jflex minijava.flex
@@ -8,10 +8,11 @@ compile:
 run:
 	# java -cp java-cup-11b-runtime.jar:. Parser tests/sample.1.pl
 	# java -cp java-cup-11b-runtime.jar:. Parser tests/sample.2.pl
-	java -cp java-cup-11b-runtime.jar:. Parser tests/sample.3.pl
-	java -cp java-cup-11b-runtime.jar:. Parser tests/sample.4.pl
-	java -cp java-cup-11b-runtime.jar:. Parser tests/sample.5.pl
+	# java -cp java-cup-11b-runtime.jar:. Parser tests/sample.3.pl
+	# java -cp java-cup-11b-runtime.jar:. Parser tests/sample.4.pl
+	# java -cp java-cup-11b-runtime.jar:. Parser tests/sample.5.pl
 	java -cp java-cup-11b-runtime.jar:. Parser tests/typecheck.1.txt
+	# java -cp java-cup-11b-runtime.jar:. Parser tests/codegen.1.txt
 
 clean:
 	rm Lexer.java Parser.java sym.java

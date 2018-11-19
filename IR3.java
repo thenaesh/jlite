@@ -1,6 +1,7 @@
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.AbstractMap;
 
 class IR3 {
     public static Integer labelCount = 0;
@@ -9,8 +10,10 @@ class IR3 {
     public static Integer mkLabel() {
         return IR3.labelCount++;
     }
-    public static String mkVar() {
-        return "__v" + IR3.variableCount++;
+    public static String mkVar(Type type) {
+        String varName = "_v" + IR3.variableCount++;
+        SymbolTables.currentTable.setEntry(varName, type);
+        return varName;
     }
 
     public static String extractLvalue(ArrayList<IR3> irs) {
@@ -64,34 +67,18 @@ class GotoIR3 extends IR3 {
     }
 }
 
-class ClassDataIR3 extends IR3 {
-    public ClassDescriptors cdesc;
-    public ClassDataIR3(ClassDescriptors cdesc) {
-        this.cdesc = cdesc;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(cdesc.toString());
-        return sb.toString();
-    }
-}
-
 class FunctionStartIR3 extends IR3 {
-    public String classname;
     public String returntype;
     public String name;
-    public HashMap<String, String> params = new HashMap<>(); // maps name to type
+    public ArrayList<Map.Entry<String, Type>> params = new ArrayList<>();
 
-    public FunctionStartIR3(String classname, String returntype, String name) {
-        this.classname = classname;
+    public FunctionStartIR3(String returntype, String name) {
         this.returntype = returntype;
         this.name = name;
     }
 
     public void addParam(String name, String type) {
-        params.put(name, type);
+        params.add(new AbstractMap.SimpleEntry(name, Type.fromTypeString(type)));
     }
 
     @Override
@@ -99,10 +86,10 @@ class FunctionStartIR3 extends IR3 {
         StringBuilder sb = new StringBuilder();
         sb.append(returntype + " " + name);
         sb.append("(");
-        sb.append(classname + " this,");
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            sb.append(" " + entry.getValue() + " " + entry.getKey() + ",");
+        for (Map.Entry<String, Type> entry : params) {
+            sb.append(entry.getValue() + " " + entry.getKey().toString() + ", ");
         }
+        sb.deleteCharAt(sb.length() - 1);
         sb.deleteCharAt(sb.length() - 1);
         sb.append(")");
         sb.append(" {\n");
@@ -118,21 +105,21 @@ class FunctionEndIR3 extends IR3 {
 }
 
 class FunctionCallIR3 extends IR3 {
-    public MethodDescriptor md;
-    public String obj;
+    public String name;
+    public Type returntype;
     public ArrayList<String> args;
 
-    public FunctionCallIR3(MethodDescriptor md, String obj, ArrayList<String> args) {
-        this.lvalue = IR3.mkVar();
-        this.md = md;
-        this.obj = obj;
+    public FunctionCallIR3(String name, Type returntype, ArrayList<String> args) {
+        this.lvalue = IR3.mkVar(returntype);
+        this.name = name;
+        this.returntype = returntype;
         this.args = args;
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(lvalue + " = " + md.name + "(" + obj + ",");
+        sb.append(lvalue + " = " + name + "(");
         for (String arg : args) sb.append(arg + ",");
         sb.deleteCharAt(sb.length() - 1);
         sb.append(");\n");
@@ -166,31 +153,11 @@ class ReadIR3 extends IR3 {
     }
 }
 
-class VarDeclIR3 extends IR3 {
-    public String name;
-    public String type;
-
-    public VarDeclIR3(String name, String type) {
-        this.name = name;
-        this.type = type;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(type);
-        sb.append(" ");
-        sb.append(name);
-        sb.append(";\n");
-        return sb.toString();
-    }
-}
-
 class ConstructionIR3 extends IR3 {
     public String cls;
 
     public ConstructionIR3(String cls) {
-        this.lvalue = IR3.mkVar();
+        this.lvalue = IR3.mkVar(new RefType(cls));
         this.cls = cls;
     }
 
@@ -238,12 +205,31 @@ class AssignmentIR3 extends IR3 {
     }
 }
 
+class MemberAssignmentIR3 extends IR3 {
+    public String field;
+    public String val;
+
+    public MemberAssignmentIR3(String assigneeObject, String assigneeField, String val) {
+        this.lvalue = assigneeObject;
+        this.field = assigneeField;
+        this.val = val;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(lvalue + "." + field + " = " + val + ";\n");
+        return sb.toString();
+    }
+}
+
 class MemberAccessIR3 extends IR3 {
     public String obj;
     public String field;
 
     public MemberAccessIR3(String obj, String field) {
-        this.lvalue = IR3.mkVar();
+        RefType objType = (RefType) SymbolTables.currentTable.getEntry(obj).type;
+        this.lvalue = IR3.mkVar(ClassTables.get(objType.classname).getFieldType(field));
         this.obj = obj;
         this.field = field;
     }
@@ -261,7 +247,7 @@ class UnOpIR3 extends IR3 {
     public String operand;
 
     public UnOpIR3(String op, String operand) {
-        this.lvalue = IR3.mkVar();
+        this.lvalue = IR3.mkVar(SymbolTables.currentTable.getEntry(operand).type);
         this.op = op;
         this.operand = operand;
     }
@@ -280,7 +266,7 @@ class BinOpIR3 extends IR3 {
     public String right;
 
     public BinOpIR3(String op, String left, String right) {
-        this.lvalue = IR3.mkVar();
+        this.lvalue = IR3.mkVar(SymbolTables.currentTable.getEntry(left).type);
         this.op = op;
         this.left = left;
         this.right = right;
@@ -298,7 +284,7 @@ class IntIR3 extends IR3 {
     public Integer val;
 
     public IntIR3(Integer val) {
-        this.lvalue = IR3.mkVar();
+        this.lvalue = IR3.mkVar(Type.JLINT);
         this.val = val;
     }
 
@@ -313,7 +299,7 @@ class BoolIR3 extends IR3 {
     public Boolean val;
 
     public BoolIR3(Boolean val) {
-        this.lvalue = IR3.mkVar();
+        this.lvalue = IR3.mkVar(Type.JLBOOL);
         this.val = val;
     }
 
@@ -328,7 +314,7 @@ class StringIR3 extends IR3 {
     public String val;
 
     public StringIR3(String val) {
-        this.lvalue = IR3.mkVar();
+        this.lvalue = IR3.mkVar(Type.JLSTRING);
         this.val = val;
     }
 
