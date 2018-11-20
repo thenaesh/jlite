@@ -3,7 +3,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.AbstractMap;
 
-class IR3 {
+abstract class IR3 {
     public static Integer labelCount = 0;
     public static Integer variableCount = 0;
 
@@ -11,7 +11,7 @@ class IR3 {
         return IR3.labelCount++;
     }
     public static String mkVar(Type type) {
-        String varName = "_v" + IR3.variableCount++;
+        String varName = "_tmp" + IR3.variableCount++;
         SymbolTables.currentTable.setLocal(varName, type);
         return varName;
     }
@@ -23,7 +23,17 @@ class IR3 {
         return irs.get(irs.size() - 1).lvalue;
     }
 
+    public static void printIR3(ArrayList<IR3> irs) {
+        System.out.println("===== IR3 BEGIN =====\n");
+        for (IR3 ir : irs) System.out.println(ir.toString());
+        System.out.println("===== IR3 END =====\n");
+    }
+
     public String lvalue;
+
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        return new ArrayList<>();
+    }
 }
 
 class PlaceholderIR3 extends IR3 {
@@ -140,6 +150,38 @@ class PrintIR3 extends IR3 {
     public String toString() {
         return "println(" + output + "); " + (isInt ? "as Int" : "") + "\n";
     }
+
+    @Override
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        ArrayList<ARMInstruction> instructions = new ArrayList<>();
+
+        SymbolTableEntry outputTableEntry = SymbolTables.currentTable.getEntry(output);
+
+        instructions.add(new ARMMov("v1", "a1")); // save a1 in a tmp register v1
+        instructions.add(new ARMMov("v2", "a2")); // save a2 in a tmp register v2
+
+        if (isInt) {
+            instructions.add(new ARMLoadLabel("a1", DataTable.PRINT_INT_FORMAT_STR_LABEL));
+            if (outputTableEntry.isRegisterAllocated()) {
+                instructions.add(new ARMMov("a2", outputTableEntry.register));
+            } else {
+                instructions.add(new ARMSimpleMemoryLoad("a2", "sp", outputTableEntry.offset));
+            }
+        } else {
+            if (outputTableEntry.isRegisterAllocated()) {
+                instructions.add(new ARMMov("a1", outputTableEntry.register));
+            } else {
+                instructions.add(new ARMSimpleMemoryLoad("a1", "sp", outputTableEntry.offset));
+            }
+        }
+
+        instructions.add(new ARMPrintf());
+
+        instructions.add(new ARMMov("a2", "v2")); // restore v2 from a2
+        instructions.add(new ARMMov("a1", "v1")); // restore v1 from a1
+
+        return instructions;
+    }
 }
 
 class ReadIR3 extends IR3 {
@@ -205,6 +247,27 @@ class AssignmentIR3 extends IR3 {
         sb.append(lvalue + " = " + val + ";\n");
         return sb.toString();
     }
+
+    @Override
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        ArrayList<ARMInstruction> instructions = new ArrayList<>();
+
+        SymbolTableEntry lvalueTableEntry = SymbolTables.currentTable.getEntry(lvalue);
+        SymbolTableEntry rvalueTableEntry = SymbolTables.currentTable.getEntry(val);
+
+        if (lvalueTableEntry.isRegisterAllocated() && rvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMMov(lvalueTableEntry.register, rvalueTableEntry.register));
+        } else if (lvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMSimpleMemoryLoad(lvalueTableEntry.register, "sp", rvalueTableEntry.offset));
+        } else if (rvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMSimpleMemoryStore(rvalueTableEntry.register, "sp", lvalueTableEntry.offset));
+        } else {
+            instructions.add(new ARMSimpleMemoryLoad("v1", "sp", rvalueTableEntry.offset));
+            instructions.add(new ARMSimpleMemoryStore("v1", "sp", lvalueTableEntry.offset));
+        }
+
+        return instructions;
+    }
 }
 
 class LabelAssignmentIR3 extends IR3 {
@@ -220,6 +283,22 @@ class LabelAssignmentIR3 extends IR3 {
         StringBuilder sb = new StringBuilder();
         sb.append(lvalue + " = =L" + label + ";\n");
         return sb.toString();
+    }
+
+    @Override
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        ArrayList<ARMInstruction> instructions = new ArrayList<>();
+
+        SymbolTableEntry lvalueTableEntry = SymbolTables.currentTable.getEntry(lvalue);
+
+        if (lvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMLoadLabel(lvalueTableEntry.register, label));
+        } else {
+            instructions.add(new ARMLoadLabel("v1", label));
+            instructions.add(new ARMSimpleMemoryStore("v1", "sp", lvalueTableEntry.offset));
+        }
+
+        return instructions;
     }
 }
 
@@ -308,6 +387,38 @@ class BinOpIR3 extends IR3 {
         sb.append(lvalue + " = " + left + " " + op + " " + right + ";\n");
         return sb.toString();
     }
+
+    @Override
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        ArrayList<ARMInstruction> instructions = new ArrayList<>();
+
+        SymbolTableEntry leftTableEntry = SymbolTables.currentTable.getEntry(left);
+        SymbolTableEntry rightTableEntry = SymbolTables.currentTable.getEntry(right);
+
+        if (leftTableEntry.isRegisterAllocated() && rightTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMArithmetic(op, "v1", leftTableEntry.register, rightTableEntry.register));
+        } else if (leftTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMSimpleMemoryLoad("v3", "sp", rightTableEntry.offset));
+            instructions.add(new ARMArithmetic(op, "v1", "v2", "v3"));
+        } else if (rightTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMSimpleMemoryLoad("v2", "sp", leftTableEntry.offset));
+            instructions.add(new ARMArithmetic(op, "v1", "v2", "v3"));
+        } else {
+            instructions.add(new ARMSimpleMemoryLoad("v2", "sp", leftTableEntry.offset));
+            instructions.add(new ARMSimpleMemoryLoad("v3", "sp", rightTableEntry.offset));
+            instructions.add(new ARMArithmetic(op, "v1", "v2", "v3"));
+        }
+
+        SymbolTableEntry lvalueTableEntry = SymbolTables.currentTable.getEntry(lvalue);
+
+        if (lvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMMov(lvalueTableEntry.register, "v1"));
+        } else {
+            instructions.add(new ARMSimpleMemoryStore("v1", "sp", lvalueTableEntry.offset));
+        }
+
+        return instructions;
+    }
 }
 
 class IntIR3 extends IR3 {
@@ -324,6 +435,22 @@ class IntIR3 extends IR3 {
         sb.append(lvalue + " = " + val + ";\n");
         return sb.toString();
     }
+
+    @Override
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        ArrayList<ARMInstruction> instructions = new ArrayList<>();
+
+        SymbolTableEntry lvalueTableEntry = SymbolTables.currentTable.getEntry(lvalue);
+
+        if (lvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMLoadLiteral(lvalueTableEntry.register, val));
+        } else {
+            instructions.add(new ARMLoadLiteral("v1", val));
+            instructions.add(new ARMSimpleMemoryStore("v1", "sp", lvalueTableEntry.offset));
+        }
+
+        return instructions;
+    }
 }
 class BoolIR3 extends IR3 {
     public Boolean val;
@@ -338,5 +465,21 @@ class BoolIR3 extends IR3 {
         StringBuilder sb = new StringBuilder();
         sb.append(lvalue + " = " + val + ";\n");
         return sb.toString();
+    }
+
+    @Override
+    public ArrayList<ARMInstruction> toARMInstructions() {
+        ArrayList<ARMInstruction> instructions = new ArrayList<>();
+
+        SymbolTableEntry lvalueTableEntry = SymbolTables.currentTable.getEntry(lvalue);
+
+        if (lvalueTableEntry.isRegisterAllocated()) {
+            instructions.add(new ARMLoadLiteral(lvalueTableEntry.register, val ? 1 : 0));
+        } else {
+            instructions.add(new ARMLoadLiteral("v1", val ? 1 : 0));
+            instructions.add(new ARMSimpleMemoryStore("v1", "sp", lvalueTableEntry.offset));
+        }
+
+        return instructions;
     }
 }

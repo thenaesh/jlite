@@ -125,14 +125,15 @@ class ProgramAST extends AST {
         LocalEnvironment localEnvironment = new LocalEnvironment();
         this.typeCheck(classDescriptors, localEnvironment);
 
+        DataTable.init();
+
         ArrayList<IR3> irs = this.genIR();
+        ArrayList<ARMInstruction> instructions = ARMInstruction.generateARMInstructions(irs);
 
         SymbolTables.print();
         ClassTables.print();
-        DataTable.init(); DataTable.print();
-        System.out.println("===== IR3 BEGIN =====\n");
-        for (IR3 ir : irs) System.out.println(ir.toString());
-        System.out.println("===== IR3 END =====\n");
+        IR3.printIR3(irs);
+        ARMInstruction.printASM(instructions);
     }
 
     @Override

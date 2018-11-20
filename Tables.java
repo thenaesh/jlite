@@ -234,7 +234,7 @@ class DataTableEntry {
 
     @Override
     public String toString() {
-        return directive + " " + item;
+        return directive + " \"" + item + "\\n\"";
     }
 }
 
@@ -255,7 +255,6 @@ class DataTable {
 
     public static void print() {
         StringBuilder sb = new StringBuilder();
-        sb.append("===== Data Table BEGIN =====\n");
 
         for (Map.Entry<Integer, DataTableEntry> p : data.entrySet()) {
             sb.append("L" + p.getKey() + ":\n    ");
@@ -263,7 +262,6 @@ class DataTable {
             sb.append("\n");
         }
 
-        sb.append("===== Data Table END =====\n");
         System.out.println(sb.toString());
     }
 
