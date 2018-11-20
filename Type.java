@@ -17,6 +17,10 @@ abstract class Type {
         return new RefType(str);
     }
 
+    public Integer width() {
+        return 4;
+    }
+
     @Override
     public boolean equals(Object o) {
         return o.getClass().equals(this.getClass());
@@ -81,6 +85,11 @@ class JLBool extends ValueType {
 }
 
 class JLVoid extends Type {
+    @Override
+    public Integer width() {
+        return 0;
+    }
+
     @Override
     public boolean isVoid() {
         return true;

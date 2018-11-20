@@ -1,5 +1,5 @@
 class Main {
-    Void main(Int x, Int y, Int z) {
+    Void main(Int x, Int y, Int z, Int abc, String def, Box ghi) {
         Int w;
         Bool boo;
         Int area;
@@ -30,6 +30,7 @@ class Main {
         }
         area = b.scale(b.s.area()).s.area();
         w = b.mass(100);
+        w = x + w;
     }
 }
 

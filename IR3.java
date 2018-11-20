@@ -12,7 +12,7 @@ class IR3 {
     }
     public static String mkVar(Type type) {
         String varName = "_v" + IR3.variableCount++;
-        SymbolTables.currentTable.setEntry(varName, type);
+        SymbolTables.currentTable.setLocal(varName, type);
         return varName;
     }
 
@@ -42,7 +42,7 @@ class LabelIR3 extends IR3 {
 
     @Override
     public String toString() {
-        return "LABEL_" + label + ":\n";
+        return "L" + label + ":\n";
     }
 }
 
@@ -62,7 +62,7 @@ class GotoIR3 extends IR3 {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         if (condition != null) sb.append("If(" + condition + ") ");
-        sb.append("Goto " + label + ";\n");
+        sb.append("Goto .L" + label + ";\n");
         return sb.toString();
     }
 }
@@ -129,14 +129,16 @@ class FunctionCallIR3 extends IR3 {
 
 class PrintIR3 extends IR3 {
     String output;
+    Boolean isInt;
 
-    PrintIR3(String output) {
+    PrintIR3(String output, Boolean isInt) {
         this.output = output;
+        this.isInt = isInt;
     }
 
     @Override
     public String toString() {
-        return "println(" + output + ");\n";
+        return "println(" + output + "); " + (isInt ? "as Int" : "") + "\n";
     }
 }
 
@@ -205,20 +207,42 @@ class AssignmentIR3 extends IR3 {
     }
 }
 
-class MemberAssignmentIR3 extends IR3 {
-    public String field;
-    public String val;
+class LabelAssignmentIR3 extends IR3 {
+    public Integer label;
 
-    public MemberAssignmentIR3(String assigneeObject, String assigneeField, String val) {
-        this.lvalue = assigneeObject;
-        this.field = assigneeField;
-        this.val = val;
+    public LabelAssignmentIR3(String assignee, Integer label) {
+        this.lvalue = assignee;
+        this.label = label;
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(lvalue + "." + field + " = " + val + ";\n");
+        sb.append(lvalue + " = =L" + label + ";\n");
+        return sb.toString();
+    }
+}
+
+class MemberAssignmentIR3 extends IR3 {
+    public String field;
+    public String val;
+    public Integer offset;
+
+    public MemberAssignmentIR3(String assigneeObject, String assigneeField, String val) {
+        this.lvalue = assigneeObject;
+        this.field = assigneeField;
+        this.val = val;
+
+        // a current table is expected to be active during IR3 construction
+        Type assigneeObjType = SymbolTables.currentTable.getEntry(assigneeObject).type;
+        this.offset = ClassTables.get(assigneeObjType).getFieldOffset(assigneeField);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(lvalue + "[" + offset + "]" + " = " + val + ";");
+        sb.append(" {" + lvalue + "." + field + " = " + val + "}\n");
         return sb.toString();
     }
 }
@@ -226,18 +250,24 @@ class MemberAssignmentIR3 extends IR3 {
 class MemberAccessIR3 extends IR3 {
     public String obj;
     public String field;
+    public Integer offset;
 
     public MemberAccessIR3(String obj, String field) {
+        // a current table is expected to be active during IR3 construction
         RefType objType = (RefType) SymbolTables.currentTable.getEntry(obj).type;
+
         this.lvalue = IR3.mkVar(ClassTables.get(objType.classname).getFieldType(field));
         this.obj = obj;
         this.field = field;
+
+        this.offset = ClassTables.get(objType).getFieldOffset(field);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(lvalue + " = " + obj + "." + field + ";\n");
+        sb.append(lvalue + " = " + obj + "[" + offset + "];");
+        sb.append(" {" + lvalue + " = " + obj + "." + field + "}\n");
         return sb.toString();
     }
 }
@@ -300,21 +330,6 @@ class BoolIR3 extends IR3 {
 
     public BoolIR3(Boolean val) {
         this.lvalue = IR3.mkVar(Type.JLBOOL);
-        this.val = val;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(lvalue + " = " + val + ";\n");
-        return sb.toString();
-    }
-}
-class StringIR3 extends IR3 {
-    public String val;
-
-    public StringIR3(String val) {
-        this.lvalue = IR3.mkVar(Type.JLSTRING);
         this.val = val;
     }
 

@@ -129,6 +129,7 @@ class ProgramAST extends AST {
 
         SymbolTables.print();
         ClassTables.print();
+        DataTable.init(); DataTable.print();
         System.out.println("===== IR3 BEGIN =====\n");
         for (IR3 ir : irs) System.out.println(ir.toString());
         System.out.println("===== IR3 END =====\n");
@@ -387,9 +388,9 @@ class FuncDeclAST extends AST {
         ArrayList<IR3> irs = new ArrayList<>();
 
         SymbolTables.create();
-        for (VarDeclAST var : this.body.vardecls) SymbolTables.currentTable.setEntry(var.name, Type.fromTypeString(var.type));
-        for (VarDeclAST param : this.params) SymbolTables.currentTable.setEntry(param.name, Type.fromTypeString(param.type));
-        SymbolTables.currentTable.setEntry("this", Type.fromTypeString(this.classname));
+        SymbolTables.currentTable.setParam("this", Type.fromTypeString(this.classname));
+        for (VarDeclAST param : this.params) SymbolTables.currentTable.setParam(param.name, Type.fromTypeString(param.type));
+        for (VarDeclAST var : this.body.vardecls) SymbolTables.currentTable.setLocal(var.name, Type.fromTypeString(var.type));
         ArrayList<IR3> bodyirs = body.genIR();
         SymbolTables.flush(augmentedName());
 
@@ -552,22 +553,65 @@ class AssignStmtAST extends StmtAST {
     @Override
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
-        ArrayList<IR3> valirs = val.genIR();
+        ArrayList<IR3> valirs;
+        String rvalue;
+
+        // a small optimisation to avoid things like `_v12 = b;` where they are not needed
+        if (val instanceof RefAST) {
+            valirs = new ArrayList<>();
+            RefAST val0 = (RefAST) val;
+            rvalue = val0.id;
+        } else {
+            valirs = val.genIR();
+            rvalue = IR3.extractLvalue(valirs);
+        }
+
         irs.addAll(valirs);
-        if (assignee.kind.equals("reference")) {
+
+        if (assignee instanceof RefAST/* && !((RefAST)assignee).isActuallyMemberAccess*/) {
             // doesn't make sense to store raw id in tmp variable
             irs.add(new AssignmentIR3(((RefAST)assignee).id, IR3.extractLvalue(valirs)));
             return irs;
         }
-        if (assignee.kind.equals("memberaccess") && ((MemberAccessAST)assignee).obj.kind.equals("reference")) {
+        /*
+        if (assignee instanceof RefAST && !((RefAST)assignee).isActuallyMemberAccess) {
+            assignee = ((RefAST)assignee).getActualMemberAccessAST();
+        }
+        */
+        if (/*assignee.kind.equals("memberaccess")*/ assignee instanceof MemberAccessAST && ((MemberAccessAST)assignee).obj instanceof RefAST) {
             // if indexing an object directly without any additional indirection, shortcut
             MemberAccessAST assigneeAfterCast = (MemberAccessAST)assignee;
-            irs.add(new MemberAssignmentIR3(((RefAST)assigneeAfterCast.obj).id, assigneeAfterCast.field, IR3.extractLvalue(valirs)));
+            RefAST obj = (RefAST)assigneeAfterCast.obj;
+            Type type = Type.fromTypeString(obj.__type__);
+            irs.add(new MemberAssignmentIR3(obj.id, assigneeAfterCast.field, IR3.extractLvalue(valirs)));
             return irs;
         }
+
         ArrayList<IR3> assigneeirs = assignee.genIR();
+        int N = assigneeirs.size();
+
+        // avoid creating a member access chain that yields a primitive lvalue
+        if (N > 1) {
+            MemberAccessIR3 last = (MemberAccessIR3)assigneeirs.get(N-1);
+            SymbolTableEntry lastLvalue = SymbolTables.currentTable.getEntry(last.lvalue);
+            Type typeOfLastLvalue = lastLvalue.type;
+            
+            if (!typeOfLastLvalue.isValueType()) {
+                irs.addAll(assigneeirs);
+                irs.add(new AssignmentIR3(IR3.extractLvalue(assigneeirs), rvalue));
+                return irs;
+            }
+
+            // remove the last statement which is now unused
+            SymbolTables.currentTable.removeLocal(IR3.extractLvalue(assigneeirs));
+            assigneeirs.remove(N-1);
+
+            irs.addAll(assigneeirs);
+            irs.add(new MemberAssignmentIR3(last.obj, last.field, rvalue));
+        }
+
         irs.addAll(assigneeirs);
-        irs.add(new AssignmentIR3(IR3.extractLvalue(assigneeirs), IR3.extractLvalue(valirs)));
+        irs.add(new AssignmentIR3(IR3.extractLvalue(assigneeirs), rvalue));
         return irs;
     }
 
@@ -775,7 +819,7 @@ class PrintlnAST extends StmtAST {
     @Override
     public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
         output.typeCheck(cdesc, lenv);
-        if (!output.__type__.equals("String")) {
+        if (!output.__type__.equals("String") && !output.__type__.equals("Int")) {
             throw new TypeCheckingException("Can only print a String, not " + output.__type__);
         }
         return lenv;
@@ -785,7 +829,7 @@ class PrintlnAST extends StmtAST {
     public ArrayList<IR3> genIR() {
         ArrayList<IR3> irs = new ArrayList<>();
         ArrayList<IR3> outputir = output.genIR();
-        PrintIR3 printir = new PrintIR3(IR3.extractLvalue(outputir));
+        PrintIR3 printir = new PrintIR3(IR3.extractLvalue(outputir), output.__type__.equals("Int"));
         irs.addAll(outputir);
         irs.add(printir);
         return irs;
@@ -1043,7 +1087,9 @@ class RefAST extends AST {
 
     @Override
     public LocalEnvironment typeCheck(ClassDescriptors cdesc, LocalEnvironment lenv) throws TypeCheckingException {
-        if (!lenv.contains(id)) throw new TypeCheckingException(id + " not found");
+        if (!lenv.contains(id)) {
+            throw new TypeCheckingException("Variable " + id + " not found. Did you mean to write this." + id + "?");
+        }
         this.__type__ = lenv.getType(id);
         return lenv;
     }
@@ -1053,6 +1099,10 @@ class RefAST extends AST {
         ArrayList<IR3> irs = new ArrayList<>();
         irs.add(new AssignmentIR3(IR3.mkVar(Type.fromTypeString(this.__type__)), id));
         return irs;
+    }
+
+    public MemberAccessAST getActualMemberAccessAST() {
+        return new MemberAccessAST(new ThisPtrAST(), id);
     }
 
     public String id;
@@ -1189,7 +1239,7 @@ class MemberAccessAST extends AST {
     }
 
     public AST obj;
-    public String field;
+    public String field; // ASSUMPTION: this is not a method, since otherwise it was have been handed as a special case in FuncCallAST
 }
 
 class IntAST extends AST {
@@ -1248,8 +1298,11 @@ class StringAST extends AST {
 
     @Override
     public ArrayList<IR3> genIR() {
+        Integer label = IR3.mkLabel();
+        DataTable.create(label, new DataTableEntry(".asciz", val));
+
         ArrayList<IR3> irs = new ArrayList<>();
-        irs.add(new StringIR3(val));
+        irs.add(new LabelAssignmentIR3(IR3.mkVar(Type.JLSTRING), label));
         return irs;
     }
 
