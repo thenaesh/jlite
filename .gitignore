@@ -2,3 +2,7 @@ Lexer.java*
 Parser.java*
 sym.java*
 *.class
+sample
+*.s
+m5out/
+a.out

@@ -134,6 +134,7 @@ class ProgramAST extends AST {
         ClassTables.print();
         IR3.printIR3(irs);
         ARMInstruction.printASM(instructions);
+        ARMInstruction.writeASMToFile(instructions, "sample.s");
     }
 
     @Override

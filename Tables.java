@@ -28,7 +28,7 @@ class SymbolTableEntry {
 class SymbolTable {
     public LinkedHashMap<String, SymbolTableEntry> locals = new LinkedHashMap<>();
     public LinkedHashMap<String, SymbolTableEntry> params = new LinkedHashMap<>();
-    private Integer currentOffset = 0; // depends on whether there are other things on the stack before local variables
+    public Integer size = 0; // depends on whether there are other things on the stack before local variables
 
     public SymbolTableEntry getEntry(String name) {
         return locals.containsKey(name) ? locals.get(name) : params.get(name); // local vars shadow params
@@ -62,8 +62,9 @@ class SymbolTable {
             if (count++ < 4) {
                 entry.register = "a" + count;
             } else {
-                entry.offset = currentOffset;
-                currentOffset += entry.type.width();
+                break; // TODO: SUPPORT MORE THAN 4 PARAMETERS!
+                // entry.offset = size;
+                // size += entry.type.width();
             }
         }
     }
@@ -71,8 +72,8 @@ class SymbolTable {
     private void generateLocalVariableOffsetsAndRegisters() {
         for (Map.Entry<String, SymbolTableEntry> p : this.locals.entrySet()) {
             SymbolTableEntry entry = p.getValue();
-            entry.offset = currentOffset;
-            currentOffset += entry.type.width();
+            entry.offset = size;
+            size += entry.type.width();
         }
     }
 
@@ -122,15 +123,16 @@ class SymbolTables {
 
     public static void print() {
         StringBuilder sb = new StringBuilder();
-        sb.append("===== Symbol Table BEGIN =====\n");
+        sb.append("===== Symbol Tables BEGIN =====\n");
 
         for (HashMap.Entry<String, SymbolTable> p : tables.entrySet()) {
+            sb.append("size = " + p.getValue().size + "\n");
             sb.append("function " + p.getKey() + "\n");
             sb.append(p.getValue().toString());
             sb.append("\n");
         }
 
-        sb.append("===== Symbol Table END =====\n");
+        sb.append("===== Symbol Tables END =====\n");
         System.out.println(sb.toString());
     }
 }
@@ -254,6 +256,10 @@ class DataTable {
     }
 
     public static void print() {
+        System.out.println(getTableString());
+    }
+
+    public static String getTableString() {
         StringBuilder sb = new StringBuilder();
 
         for (Map.Entry<Integer, DataTableEntry> p : data.entrySet()) {
@@ -262,7 +268,7 @@ class DataTable {
             sb.append("\n");
         }
 
-        System.out.println(sb.toString());
+        return sb.toString();
     }
 
     public static Integer PRINT_INT_FORMAT_STR_LABEL;

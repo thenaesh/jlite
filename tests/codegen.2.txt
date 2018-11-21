@@ -1,0 +1,53 @@
+class Main {
+    Void main(Int x, Int y, Int z) {
+        Void zzz;
+        Int w;
+        Int x;
+        Int i;
+        Bool b;
+        Bool c;
+        Int area;
+        String str;
+        Box box;
+        Math math;
+        println("ROFL");
+        math = new Math();
+        zzz = math.hello();
+        i = 42;
+        box = new Box();
+        box.x = 3;
+        box.y = 4;
+        box.z = 5;
+        w = box.vol();
+        println(w);
+        w = box.mass(100);
+        println(w);
+        println("LOL");
+    }
+}
+class Box {
+    Int x;
+    Int y;
+    Int z;
+
+    Int vol() {
+        Int retval;
+        println(this.x);
+        println(this.y);
+        println(this.z);
+        return this.x * this.y * this.z;
+    }
+
+    Int mass(Int density) {
+        return density * this.vol();
+    }
+}
+class Math {
+    Int multiply(Int x, Int y) {
+        return x * y;
+    }
+
+    Void hello() {
+        println("Hello!");
+    }
+}
