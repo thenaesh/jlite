@@ -201,11 +201,11 @@ class FunctionCallIR3 extends IR3 {
     public ArrayList<ARMInstruction> toARMInstructions() {
         ArrayList<ARMInstruction> instructions = new ArrayList<>();
 
-        // save registers
-        instructions.add(new ARMSTMFD("a1"));
-        instructions.add(new ARMSTMFD("a2"));
-        instructions.add(new ARMSTMFD("a3"));
-        instructions.add(new ARMSTMFD("a4"));
+        // move a1-a4 into v1-v4 (cannot push them just yet... will mess up stack offsets for the argument load)
+        instructions.add(new ARMMov("v1", "a1"));
+        instructions.add(new ARMMov("v2", "a2"));
+        instructions.add(new ARMMov("v3", "a3"));
+        instructions.add(new ARMMov("v4", "a4"));
 
         // load arguments
         int paramRegNum = 1;
@@ -220,13 +220,21 @@ class FunctionCallIR3 extends IR3 {
             } else {
                 instructions.add(new ARMSimpleMemoryLoad(paramReg, "sp", argEntry.offset));
             }
+
+            paramRegNum++;
         }
 
-        // branch with link
+        // save registers (now safe to push)
+        instructions.add(new ARMSTMFD("v1"));
+        instructions.add(new ARMSTMFD("v2"));
+        instructions.add(new ARMSTMFD("v3"));
+        instructions.add(new ARMSTMFD("v4"));
+
+        // call function
         instructions.add(new ARMBranchLink(this.name));
 
-        // move the return value from a1 into v1
-        instructions.add(new ARMMov("v1", "a1"));
+        // move the return value from a1 into v5
+        instructions.add(new ARMMov("v5", "a1"));
 
         // restore registers after return
         instructions.add(new ARMLDMFD("a4"));
@@ -234,13 +242,13 @@ class FunctionCallIR3 extends IR3 {
         instructions.add(new ARMLDMFD("a2"));
         instructions.add(new ARMLDMFD("a1"));
 
-        // save return value (that is now in a1)
+        // save return value (that is now in v5)
         SymbolTableEntry lvalueTableEntry = SymbolTables.currentTable.getEntry(lvalue);
 
         if (lvalueTableEntry.isRegisterAllocated()) {
-            instructions.add(new ARMMov(lvalueTableEntry.register, "v1"));
+            instructions.add(new ARMMov(lvalueTableEntry.register, "v5"));
         } else {
-            instructions.add(new ARMSimpleMemoryStore("v1", "sp", lvalueTableEntry.offset));
+            instructions.add(new ARMSimpleMemoryStore("v5", "sp", lvalueTableEntry.offset));
         }
 
         return instructions;

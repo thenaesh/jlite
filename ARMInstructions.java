@@ -52,7 +52,7 @@ class ARMInstruction {
         sb.append(".global main\n");
         sb.append("\n");
         sb.append("main:\n");
-        sb.append("bl Main_main\n");
+        sb.append("bl " + ClassTables.nameOfMainClass + "_main\n");
         sb.append("b end\n\n");
         return sb.toString();
     }
@@ -99,8 +99,8 @@ class ARMSimpleMemoryLoad extends ARMInstruction {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        String setupOffset = String.format("ldr v5, =%d\n", offset);
-        String mainInstruction = String.format("ldr %s, [%s, v5]\n", dest, src);
+        String setupOffset = String.format("ldr r11, =%d\n", offset);
+        String mainInstruction = String.format("ldr %s, [%s, r11]\n", dest, src);
 
         sb.append(setupOffset);
         sb.append(mainInstruction);
@@ -124,8 +124,8 @@ class ARMSimpleMemoryStore extends ARMInstruction {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        String setupOffset = String.format("ldr v5, =%d\n", offset);
-        String mainInstruction = String.format("str %s, [%s, v5]\n", src, dest);
+        String setupOffset = String.format("ldr r11, =%d\n", offset);
+        String mainInstruction = String.format("str %s, [%s, r11]\n", src, dest);
 
         sb.append(setupOffset);
         sb.append(mainInstruction);

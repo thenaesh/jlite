@@ -1,0 +1,51 @@
+class Main {
+    Void main(Int x, Int y) {
+        Int i;
+        Math math;
+        
+        x = 1;
+        y = 2;
+
+        math = new Math();
+
+        println(math.sum(123, 456));
+
+        println("Factorials");
+        i = 0;
+        while (i < 10) {
+            println(math.factorial(i));
+            i = i+1;
+        }
+
+        println("Fibonacci Numbers");
+        i = 0;
+        while (i < 10) {
+            println(math.fibonacci(i));
+            i = i+1;
+        }
+    }
+}
+
+class Math {
+    Int sum(Int x, Int y) {
+        println(x);
+        println(y);
+        return x + y;
+    }
+
+    Int factorial(Int x) {
+        if (x <= 1) {
+            return 1;
+        } else {
+            return x * this.factorial (x-1);
+        }
+    }
+
+    Int fibonacci(Int x) {
+        if (x < 2) {
+            return x;
+        } else {
+            return this.fibonacci(x-1) + this.fibonacci(x-2);
+        }
+    }
+}

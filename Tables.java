@@ -196,9 +196,11 @@ class ClassTable {
 
 class ClassTables {
     public static HashMap<String, ClassTable> tables = new HashMap<>();
+    public static String nameOfMainClass = "Main";
 
     public static void generateFromClassDescriptors(ClassDescriptors cdescs) {
         for (Map.Entry<String, ClassDescriptor> entry : cdescs.classes.entrySet()) {
+            if (entry.getValue().hasMethod("main")) nameOfMainClass = entry.getKey();
             tables.put(entry.getKey(), new ClassTable(entry.getValue()));
         }
     }
@@ -236,7 +238,15 @@ class DataTableEntry {
 
     @Override
     public String toString() {
-        return directive + " \"" + item + "\\n\"";
+        StringBuilder sb = new StringBuilder();
+        for (char c : item.toCharArray()) {
+            if (c == '\n') {
+                sb.append("\\n");
+            } else {
+                sb.append(c);
+            }
+        }
+        return directive + " \"" + sb.toString() + "\\n\"";
     }
 }
 

@@ -9,19 +9,16 @@ class Main {
         Int area;
         String str;
         Box box;
-        Math math;
+        Hello h;
         println("ROFL");
-        math = new Math();
-        zzz = math.hello();
-        i = 42;
+        h = new Hello();
+        zzz = h.hello();
         box = new Box();
         box.x = 3;
         box.y = 4;
         box.z = 5;
-        w = box.vol();
-        println(w);
-        w = box.mass(100);
-        println(w);
+        println(box.vol());
+        println(box.mass(42));
         println("LOL");
     }
 }
@@ -42,11 +39,7 @@ class Box {
         return density * this.vol();
     }
 }
-class Math {
-    Int multiply(Int x, Int y) {
-        return x * y;
-    }
-
+class Hello {
     Void hello() {
         println("Hello!");
     }
